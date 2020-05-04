@@ -10,27 +10,30 @@
     <script src="https://www.gstatic.com/firebasejs/7.9.1/firebase-database.js"></script>
     <script src="http://bernii.github.io/gauge.js/dist/gauge.min.js"></script>
     <script src='https://cdn.plot.ly/plotly-latest.min.js'></script> 
-    
+    <link rel="stylesheet" href="styles.css">
     
    
 </head>
 
 <body>
     <h2>HTML Forms</h2>
+    <div class="content">
+        <form id="form">
+          <input type="text" id="fname" name="fname" placeholder="FIRST NAME"><br>
+          <input type="text" id="lname" name="lname" placeholder="LAST NAME"><br><br>
+         
+          <input type="radio" id="before_meal" name="meal" checked="checked" value="before_meal">
+          <label for="before_meal">BEFORE MEAL</label><br>
+          <input type="radio" id="after_meal" name="meal" value="after_meal">
+          <label for="after_meal">AFTER MEAL</label><br>
+        	
+          <button id="but1">SUBMIT</button>
+           
 
-<form id="form">
-  <label for="fname">First name:</label><br>
-  <input type="text" id="fname" name="fname" value="John"><br>
-  <label for="lname">Last name:</label><br>
-  <input type="text" id="lname" name="lname" value="Doe"><br><br>
+        </form> 
 
-  <button id="but1">SUBMIT ALTERNATE</button>
-
-
-</form> 
-
-<p>BELOW WILL SHOW THE DATABASE RESULTS</p>
-
+         <p>BELOW WILL SHOW THE DATABASE RESULTS</p>
+    </div>
 <div class="container">
     
 </div>
