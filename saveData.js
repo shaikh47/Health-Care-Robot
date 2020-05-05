@@ -11,116 +11,125 @@ firebase.initializeApp(firebaseConfig);
 
 
 
-const fname = document.getElementById('fname');
-const lname = document.getElementById('lname');
-
+const medicine = document.getElementById('fname');
+const dosage = document.getElementById('lname');
+const form = document.getElementById('form');
 const btn1 = document.getElementById('but1');
 
 
 let container = document.querySelector('.container');
-let ul=document.createElement('ul');
+let ul = document.createElement('ul');
 container.appendChild(ul);
 
-var dummyItems=[];
-var elementKeys=[];
+var dummyItems = [];
+var elementKeys = [];
 
 const database = firebase.database();
 
 var ref = database.ref('alternate');
-ref.on('value', gotData,errData);
+ref.on('value', gotData, errData);
 
-function gotData(data){   //this function retrieves the data from firebase
-  var entries=data.val();
-  var keys = Object.keys(entries);
-  //console.log(keys);
-  
-  ul=document.createElement('ul');  //reference the dom again
-  container.appendChild(ul);  
+function gotData(data) { //this function retrieves the data from firebase
+    var entries = data.val();
+    var keys = Object.keys(entries);
+    //console.log(keys);
 
-  for (var i = 0; i < keys.length; i++) {
-    var k=keys[i];
-    var name=entries[k].name;
-    var score=entries[k].score;
+    ul = document.createElement('ul'); //reference the dom again
+    container.appendChild(ul);
 
-    var combine='FIRST NAME: ' + name + '\n' + ' LAST NAME: ' + score;
-    console.log(combine);
-    dummyItems.push(combine);
-    //console.log(name,score);
-  }
+    for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        var medicine = entries[k].medicine;
+        var dosage = entries[k].dosage;
+        var meal = entries[k].meal;
 
-var id=0;
+        var combine = 'MEDICINE: ' + medicine + ' DOSAGE: ' + dosage + " MEAL: " + meal;
+        console.log(combine);
+        dummyItems.push(combine);
+        //console.log(name,score);
+    }
 
-dummyItems.forEach(function(item){  //for each array item insert them in the html list DOM
-    var strID='btn'+'_'+id; //creates a new ID for every button
-    id=id+1;
-    elementKeys=[];
+    var id = 0;
 
-    let li = document.createElement('li');
-    let button = document.createElement('button');
-    let str = document.createTextNode(item);
-    
-    li.appendChild(str); 
-    
-    button.innerHTML = 'DELETE';
-    //button.setAttribute("id", strID);  //sets an attribute for an elements
-    //button.setAttribute("name", strID);
-    li.appendChild(button);
-    li.setAttribute('data-id', strID);
+    dummyItems.forEach(function(item) { //for each array item insert them in the html list DOM
+        var strID = 'btn' + '_' + id; //creates a new ID for every button
+        id = id + 1;
+        elementKeys = [];
 
-    ul.appendChild(li);
+        let li = document.createElement('li');
+        let button = document.createElement('button');
+        let str = document.createTextNode(item);
 
-    // deleting data
-    button.addEventListener('click', (e) => {
-        e.stopPropagation();
-        container.removeChild(ul);  //remove the list before saving a new entry
-                                //so there wont be any duplicate values
-        dummyItems=[]; 
+        li.appendChild(str);
 
+        button.innerHTML = 'DELETE';
+        //button.setAttribute("id", strID);  //sets an attribute for an elements
+        //button.setAttribute("name", strID);
+        li.appendChild(button);
+        li.setAttribute('data-id', strID);
 
-        let id = e.target.parentElement.getAttribute('data-id');
-        var res = id.split("_");
-        var order=res[1];
-        console.log(res[1]);
+        ul.appendChild(li);
 
-        var ref = firebase.database().ref("alternate");
-        ref.orderByKey().on("child_added", function(snapshot) {
-          elementKeys.push(snapshot.key);
+        // deleting data
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            container.removeChild(ul); //remove the list before saving a new entry
+            //so there wont be any duplicate values
+            dummyItems = [];
+
+            let id = e.target.parentElement.getAttribute('data-id');
+            var res = id.split("_"); //btn_0 spliting in order to get the number only
+            var order = res[1]; //res[0] has btn and res[1] has the number
+            console.log(res[1]);
+
+            var ref = firebase.database().ref("alternate");
+            ref.orderByKey().on("child_added", function(snapshot) {
+                elementKeys.push(snapshot.key);
+            });
+            console.log(elementKeys[order]);
+            var path = 'alternate/' + elementKeys[order];
+            database.ref(path).remove();
         });
-        console.log(elementKeys[order]);
-        var path='alternate/'+elementKeys[order];
-        database.ref(path).remove();
+
     });
 
-});
-
 }
 
-function errData(error){
-  console.log(error);
+function errData(error) {
+    console.log(error);
 }
 
-
-btn1.addEventListener('click', (e) => {   //alternate saving
+//saves the data
+btn1.addEventListener('click', (e) => { //alternate saving
     e.preventDefault();
     console.log("workingg");
 
-    if(dummyItems.length!=0)
-        container.removeChild(ul);  //remove the list before saving a new entry
-                                //so there wont be any duplicate values
-    dummyItems=[];               // also empty the array
-    var ref=database.ref('/alternate/');
+    if (dummyItems.length != 0)
+        container.removeChild(ul); //remove the list before saving a new entry
+    //so there wont be any duplicate values
+    dummyItems = []; // also empty the array
+    var ref = database.ref('/alternate/');
 
-    var data={
-        name: fname.value,
-        score: lname.value
+    //radio buttons
+    var temp_meal;
+    var ele = document.getElementsByName('meal');
+    for (var i = 0; i < ele.length; i++) {
+        if (ele[i].checked) {
+            console.log(ele[i].value);
+            temp_meal = ele[i].value;
+        }
+
+    }
+
+    var data = {
+        medicine: medicine.value,
+        dosage: dosage.value,
+        meal: temp_meal
     }
 
     ref.push(data);
-    
+    form.reset();
 });
 
-const some = document.querySelector('#form');
-console.log(some.textContent);
-
-
-
+//const some = document.querySelector('#form');
+//console.log(some.textContent);

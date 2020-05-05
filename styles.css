@@ -3,8 +3,12 @@ body{
     font-family: ubuntu;
 }
 
+.content label{
+	color: #ffffff;
+}
+
 h1{
-    color: #fff;
+    text-decoration-color: #ffffff;
     font-size: 64px;
     letter-spacing: 2px;
     margin-top: 80px;
@@ -19,9 +23,9 @@ ul{
 
 li{
     padding: 20px;
-    background: #f6f6f6;
+    background: #67a16a;
     font-size: 20px;
-    color: #555;
+    text-decoration-color: #000000;
     position: relative;
     border-bottom: 1px solid #e6e6e6;
     height: 46px;
