@@ -11,8 +11,9 @@ firebase.initializeApp(firebaseConfig);
 
 
 
-const medicine = document.getElementById('fname');
-const dosage = document.getElementById('lname');
+const medicine = document.getElementById('med');
+const dosage = document.getElementById('dose');
+const clockTime = document.getElementById('clockTime');
 const form = document.getElementById('form');
 const btn1 = document.getElementById('but1');
 
@@ -42,8 +43,9 @@ function gotData(data) { //this function retrieves the data from firebase
         var medicine = entries[k].medicine;
         var dosage = entries[k].dosage;
         var meal = entries[k].meal;
+        var timeClock = entries[k].time;
 
-        var combine = 'MEDICINE: ' + medicine + ' DOSAGE: ' + dosage + " MEAL: " + meal;
+        var combine = 'MEDICINE: ' + medicine + ' DOSAGE: ' + dosage + " MEAL: " + meal+" TIME: " + timeClock;
         console.log(combine);
         dummyItems.push(combine);
         //console.log(name,score);
@@ -124,7 +126,8 @@ btn1.addEventListener('click', (e) => { //alternate saving
     var data = {
         medicine: medicine.value,
         dosage: dosage.value,
-        meal: temp_meal
+        meal: temp_meal,
+        time: clockTime.value
     }
 
     ref.push(data);
