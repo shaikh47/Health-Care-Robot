@@ -131,47 +131,10 @@ int lastError = 0;
 
 void loop()
 {
-  int prev_position=0;
-  //detachInterrupt(digitalPinToInterrupt(interruptPin));
-  // read calibrated sensor values and obtain a measure of the line position
-  // from 0 to 5000 (for a white line, use readLineWhite() instead)
   uint16_t position;
-  position = qtr.readLineBlack(sensorValues);
 
-  // print the sensor values as numbers from 0 to 1000, where 0 means maximum
-  // reflectance and 1000 means minimum reflectance, followed by the line
-  // position
-  for (uint8_t i = 0; i < SensorCount; i++)
-  {
-    Serial.print(sensorValues[i]);
-    Serial.print('\t');
-  }
-   Serial.println(position);
-   //Serial.print(" ");
-   int error;
-   //Serial.print(error);
-//Serial.println("");
 
-    int character[20];
-    String myString = String(position);
-    myString.concat("         ");
-    //lcd.setCursor(0,0); //we start writing from the first row first column
-    //lcd.print(myString); //16 characters per line
- 
-  //foreign code  
-  
-  error = position - 4500;   //3500
-  int I = (I + error) * Ki;
-  int motorSpeed = (Kp * error) + (Kd * (error - lastError)) + I;
-  lastError = error;
-
-  int rightMotorSpeed = BaseSpeed + motorSpeed;
-  int leftMotorSpeed = BaseSpeed - motorSpeed;
-  
-  if (rightMotorSpeed > MaxSpeed ) rightMotorSpeed = MaxSpeed; // prevent the motor from going beyond max speed
-  if (leftMotorSpeed > MaxSpeed ) leftMotorSpeed = MaxSpeed; // prevent the motor from going beyond max speed
-  if (rightMotorSpeed < 0)rightMotorSpeed = 0;    
-  if (leftMotorSpeed < 0)leftMotorSpeed = 0;
+   followLine();
 
 
   //foreign code
@@ -179,7 +142,7 @@ void loop()
   if((sensorValues[0]>100 && sensorValues[1]>100 &&sensorValues[2]>100 &&sensorValues[3]>100 &&sensorValues[4]>100 &&sensorValues[5]>100 &&sensorValues[6]>100 &&sensorValues[7]>100 &&sensorValues[8]>100 && sensorValues[9]>100)
       || (sensorValues[0]<100 && sensorValues[1]>100 &&sensorValues[2]>100 &&sensorValues[3]>100 &&sensorValues[4]>100 &&sensorValues[5]>100 &&sensorValues[6]>100 &&sensorValues[7]>100 &&sensorValues[8]>100 && sensorValues[9]>100)
       || (sensorValues[0]>100 && sensorValues[1]>100 &&sensorValues[2]>100 &&sensorValues[3]>100 &&sensorValues[4]>100 &&sensorValues[5]>100 &&sensorValues[6]>100 &&sensorValues[7]>100 &&sensorValues[8]>100 && sensorValues[9]<100)){
-      steps_forward(24);   //after seeing plus intersection go forward for 15 steps
+      steps_forward(20);   //after seeing plus intersection go forward for 15 steps
       wait();   //wait a bit
       position = qtr.readLineBlack(sensorValues);  //read the line again
       delay(100);  //wait for 100 ms
@@ -201,58 +164,19 @@ void loop()
       }
     }
   //handling case 2 (⌝ like section)
-  if(sensorValues[0]<100 && sensorValues[1]<100 &&sensorValues[2]<100 &&sensorValues[3]<100 &&sensorValues[4]<100 &&sensorValues[5]<100 &&sensorValues[6]<100 &&sensorValues[7]<100 &&sensorValues[8]<100 && sensorValues[9]<100){
-      steps_forward(15);
-      wait();
-      delay(100);
-      while(sensorValues[3]<100 || sensorValues[4]<100){
-          position = qtr.readLineBlack(sensorValues);
-          hardleft();
-      }
-      wait();
-      delay(500);
-    }
+  
   //handling case 3 (⌜ like symbol)
-  if(sensorValues[0]<100 && sensorValues[1]<100 &&sensorValues[2]<100 &&sensorValues[3]<100 &&sensorValues[4]<100 &&sensorValues[5]<100 &&sensorValues[6]<100 &&sensorValues[7]<100 &&sensorValues[8]<100 && sensorValues[9]<100){
-      steps_forward(15);
-      wait();
-      delay(100);
-      while(sensorValues[3]<100 || sensorValues[4]<100){
-          position = qtr.readLineBlack(sensorValues);
-          hardleft();
-      }
-      wait();
-      delay(500);
-    }
+  
   //handling case 4 (-|  like symbol)
-  if(sensorValues[0]<100 && sensorValues[1]<100 &&sensorValues[2]<100 &&sensorValues[3]<100 &&sensorValues[4]<100 &&sensorValues[5]<100 &&sensorValues[6]<100 &&sensorValues[7]<100 &&sensorValues[8]<100 && sensorValues[9]<100){
-      steps_forward(15);
-      wait();
-      delay(100);
-      while(sensorValues[3]<100 || sensorValues[4]<100){
-          position = qtr.readLineBlack(sensorValues);
-          hardleft();
-      }
-      wait();
-      delay(500);
-    }
+  
   //handling case 5 (|-  like symbol)
-  if(sensorValues[0]<100 && sensorValues[1]<100 &&sensorValues[2]<100 &&sensorValues[3]<100 &&sensorValues[4]<100 &&sensorValues[5]<100 &&sensorValues[6]<100 &&sensorValues[7]<100 &&sensorValues[8]<100 && sensorValues[9]<100){
-      steps_forward(15);
-      wait();
-      delay(100);
-      while(sensorValues[3]<100 || sensorValues[4]<100){
-          position = qtr.readLineBlack(sensorValues);
-          hardleft();
-      }
-      wait();
-      delay(500);
-    }
-
 
   //handling the case for no line. when the robot see's no line(case 0)
     if(sensorValues[0]<100 && sensorValues[1]<100 &&sensorValues[2]<100 &&sensorValues[3]<100 &&sensorValues[4]<100 &&sensorValues[5]<100 &&sensorValues[6]<100 &&sensorValues[7]<100 &&sensorValues[8]<100 && sensorValues[9]<100){
-      steps_forward(15);
+      count=0;   // reset the value of count
+      while(count<18){  //advance forward for 20 steps
+          forward();
+      }
       wait();
       delay(100);
       while(sensorValues[3]<100 || sensorValues[4]<100){
@@ -262,21 +186,45 @@ void loop()
       wait();
       delay(500);
     }
+}
+
+void followLine(){
+    int prev_position=0;
+    //detachInterrupt(digitalPinToInterrupt(interruptPin));
+    // read calibrated sensor values and obtain a measure of the line position
+    // from 0 to 5000 (for a white line, use readLineWhite() instead)
+    uint16_t position;
+    position = qtr.readLineBlack(sensorValues);
+
+    // print the sensor values as numbers from 0 to 1000, where 0 means maximum
+    // reflectance and 1000 means minimum reflectance, followed by the line
+    // position
+    for (uint8_t i = 0; i < SensorCount; i++)
+    {
+        Serial.print(sensorValues[i]);
+        Serial.print('\t');
+    }
+    Serial.println(position);
+    int error;
+
+    error = position - 4500;   //3500
+    int I = (I + error) * Ki;
+    int motorSpeed = (Kp * error) + (Kd * (error - lastError)) + I;
+    lastError = error;
+
+    int rightMotorSpeed = BaseSpeed + motorSpeed;
+    int leftMotorSpeed = BaseSpeed - motorSpeed;
     
-  
+    if (rightMotorSpeed > MaxSpeed ) rightMotorSpeed = MaxSpeed; // prevent the motor from going beyond max speed
+    if (leftMotorSpeed > MaxSpeed ) leftMotorSpeed = MaxSpeed; // prevent the motor from going beyond max speed
+    if (rightMotorSpeed < 0)rightMotorSpeed = 0;    
+    if (leftMotorSpeed < 0)leftMotorSpeed = 0;
+    
+     //call this when straight on the line
+    move(1, rightMotorSpeed, 1);//motor derecho hacia adelante
+    move(0, leftMotorSpeed, 1);//motor izquierdo hacia adelante
 
-  
-
-    //call this when straight on the line
-  move(1, rightMotorSpeed, 1);//motor derecho hacia adelante
-  move(0, leftMotorSpeed, 1);//motor izquierdo hacia adelante
-
-  
- // Serial.print(leftMotorSpeed);
-  //Serial.print("     ");
-  //Serial.println(rightMotorSpeed);
-
-  prev_position=position; 
+    prev_position=position; 
 }
 
 void steps_hardleft(int steps){
@@ -300,7 +248,7 @@ void steps_hardright(int steps){
 void steps_forward(int steps){
   count=0;
       while(count<steps){
-        forward();
+        followLine();
       }
       wait();
       delay(500);
