@@ -5,7 +5,7 @@
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 
-#define Kp 0.07 //  0.7 works okay   0.05 also works good  
+#define Kp 0.05 //  0.7 works okay   0.05 also works good  
 #define Kd 0.39 //  0.39
 #define Ki 0.06 // 0.06
 
@@ -156,7 +156,7 @@ void leftHand(){
   //foreign code
   //handling case 1 ('+' intersection  and  'T'  like intersection  and  dead end)
   //below if handles the situation if bot sees black on all the sensors
-  if ((sensorValues[0] > 400 && sensorValues[9] > 400)) 
+  if ((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100)) 
     {
     lcd.clear();
     lcd.setCursor(0,0); 
@@ -239,7 +239,7 @@ void leftHand(){
     delay(500);
   }
   //handling case 4 (-|  like symbol  and  case 2 (⌝ like section)) no matter what we have to go left
-   else if(sensorValues[9] > 700 && sensorValues[0] < 700 && sensorValues[5] > 700)   //400
+   else if(sensorValues[9] > 900 && sensorValues[0] < 200 && (sensorValues[5] > 900 || sensorValues[6] > 900))   //400
         {
             lcd.clear();
             lcd.setCursor(0,0); 
@@ -275,7 +275,7 @@ void leftHand(){
             delay(500);
   }
   //handling case 5 (|-  like symbol) have to forward (have to go right if cant go forward)
-  else if(sensorValues[0] > 700 && sensorValues[9] < 700 && sensorValues[4] > 700)
+  else if(sensorValues[0] > 900 && sensorValues[9] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
         {
             lcd.clear();
             lcd.setCursor(0,0); 
