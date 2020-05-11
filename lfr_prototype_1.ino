@@ -1,16 +1,16 @@
 #include <QTRSensors.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 
-//#include <Wire.h> 
-//#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
-//LiquidCrystal_I2C lcd(0x27, 52, 1, 0, 4, 5, 6, 7, 3, POSITIVE); // 2, 1, 0, 4, 5, 6, 7, 3
 
-#define Kp 0.1 //  0.1
-#define Kd 0.65 //  0.65
-#define Ki 0.2 // 0.17
+#define Kp 0.07 //  0.7 works okay   0.05 also works good  
+#define Kd 0.39 //  0.39
+#define Ki 0.06 // 0.06
 
-#define MaxSpeed 50 // max speed of the robot 220
-#define BaseSpeed 50 // this is the speed at which the motors should spin when the robot is perfectly on the line
+#define MaxSpeed 40 // max speed of the robot (50)
+#define BaseSpeed 35 // this is the speed at which the motors should spin when the robot is perfectly on the line  (50)
 #define NUM_SENSORS 10 // number of sensors used
 
 #define speedturn 180
@@ -65,8 +65,8 @@ void setup() {
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(0, encoder, FALLING);
   //hardleft();
-  //lcd.begin(16,2);
-  //lcd.backlight();
+  lcd.begin(16,2);
+  lcd.backlight();
 
   // configure the sensors
   qtr.setTypeRC();
@@ -84,8 +84,8 @@ void setup() {
   }, SensorCount); //53,51,49,47,45,43,41,39,37,35
   //qtr.setEmitterPin(2);                                                             //35,37,39,41,43,45,47,49,51,53
 
-  //lcd.setCursor(0,0); //we start writing from the first row first column
-  //lcd.print("CALIBRATING!"); //16 characters poer line
+  lcd.setCursor(0,0); //we start writing from the first row first column
+  lcd.print("CALIBRATING!"); //16 characters poer line
 
   delay(500);
   pinMode(LED_BUILTIN, OUTPUT);
@@ -95,7 +95,7 @@ void setup() {
 
   // 2.5 ms RC read timeout (default) * 10 reads per calibrate() call
   // = ~25 ms per calibrate() call.
-  // Call calibrate() 400 times to make calibration take about 10 seconds.
+  // Call calibrate() 100 times to make calibration take about 10 seconds.
   for (uint16_t i = 0; i < 150; i++) {
     qtr.calibrate();
   }
@@ -117,43 +117,65 @@ void setup() {
   Serial.println();
   Serial.println();
 
-  //lcd.clear();
-  //lcd.print("DONE!");
+  lcd.clear();
+  lcd.print("DONE!");
   wait();
   delay(1000);
 
   time = millis();
-  //lcd.clear();
+  lcd.clear();
 }
 
 volatile long int count = 0;
 int lastError = 0;
 
-void loop() {
-  uint16_t position;
 
+
+void loop() {
+  uint16_t position = qtr.readLineBlack(sensorValues);
+  int parity=0;
+  for (uint8_t i = 0; i < SensorCount; i++) {
+    if(sensorValues[i]>200)
+        parity++;
+  }
+  
   followLine();
+  leftHand();
+}
+
+
+
+
+
+
+
+
+void leftHand(){
+  uint16_t position;
   position = qtr.readLineBlack(sensorValues);
   //foreign code
   //handling case 1 ('+' intersection  and  'T'  like intersection  and  dead end)
   //below if handles the situation if bot sees black on all the sensors
-  if ((sensorValues[0] > 100 && sensorValues[1] > 100 && sensorValues[2] > 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100) ||
-    (sensorValues[0] < 100 && sensorValues[1] > 100 && sensorValues[2] > 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100) ||
-    (sensorValues[0] > 100 && sensorValues[1] > 100 && sensorValues[2] > 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] < 100)) 
+  if ((sensorValues[0] > 400 && sensorValues[9] > 400)) 
     {
+    lcd.clear();
+    lcd.setCursor(0,0); 
+    lcd.print("ALL BLACK!");  
+    wait();
+    delay(1000);
     steps_forward(22); //after seeing plus intersection go forward for 24 steps
     wait(); //wait a bit
     position = qtr.readLineBlack(sensorValues); //read the line again
     delay(100); //wait for 100 ms
     //now check here to see if these is a straight line in order to verify if as a plus intersection
-    if ((sensorValues[2] < 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] < 100) //011110
-      ||(sensorValues[2] > 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] < 100 && sensorValues[7] < 100) //111100
-      ||(sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100) //001111
-      ||(sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100) //000111
-      ||(sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] < 100) //001110
-      ||(sensorValues[2] < 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] < 100 && sensorValues[7] < 100) //011100
-      ||(sensorValues[2] > 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100)) { //111000
-
+    if (!(sensorValues[0]<200 && sensorValues[1]<200 && sensorValues[2] < 200 && sensorValues[3] < 200 && sensorValues[4] < 200 && sensorValues[5] < 200 && sensorValues[6] < 200 && sensorValues[7] < 200 && sensorValues[8]<200 && sensorValues[9]<200)){ //111000
+      
+      lcd.clear();
+      lcd.setCursor(0,0); 
+      lcd.print("PLUS INTER");
+      wait();
+      delay(1000);
+      
       while ((sensorValues[9] < 500 || sensorValues[8] < 500)) { //if the if is true which means it is '+' intersection
         position = qtr.readLineBlack(sensorValues);
         hardleft();
@@ -161,7 +183,7 @@ void loop() {
       wait();
       delay(100);
       position = qtr.readLineBlack(sensorValues);
-      while ((sensorValues[4] < 400 || sensorValues[5] < 400)) { //center the bot with the line
+      while ((sensorValues[4] < 100 || sensorValues[5] < 100)) { //center the bot with the line
         position = qtr.readLineBlack(sensorValues);
         hardleft();
       }
@@ -172,6 +194,12 @@ void loop() {
     //below if handles the situation where we see no line after a T intersection
     else if (sensorValues[0] < 200 && sensorValues[1] < 200 && sensorValues[2] < 200 && sensorValues[3] < 200 && sensorValues[4] < 200 && sensorValues[5] < 200 && sensorValues[6] < 200 && sensorValues[7] < 200 && sensorValues[8] < 200 && sensorValues[9] < 200) 
     { //0000000000
+      lcd.clear();
+      lcd.setCursor(0,0); 
+      lcd.print("T INTER");  
+      wait();
+      delay(1000);
+    
       position = qtr.readLineBlack(sensorValues);
         while (sensorValues[3] < 150 || sensorValues[4] < 150) {   //move left while the bot finds the line
         position = qtr.readLineBlack(sensorValues);
@@ -184,13 +212,19 @@ void loop() {
     else if(sensorValues[0] > 100 && sensorValues[1] > 100 && sensorValues[2] > 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100)
     {
         wait();  //just wait for now
-        delay(100000);
+        delay(1000);
     }
   }//end of black line condition
 
   //handling the case for no line. when the robot see's no line(case 0)
   else if (sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100)
   {
+    lcd.clear();
+    lcd.setCursor(0,0); 
+    lcd.print("ROTATE NO LINE");  
+    wait();
+    delay(1000);
+    
     count = 0; // reset the value of count
     while (count < 18) { //advance forward for 20 steps
       forward();
@@ -205,13 +239,23 @@ void loop() {
     delay(500);
   }
   //handling case 4 (-|  like symbol  and  case 2 (⌝ like section)) no matter what we have to go left
-  else if((sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] > 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100)//1110000000
-          ||(sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] > 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100)//1111000000
-          ||(sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] > 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100)//1111100000
-          ||(sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] > 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100)//1111110000
-          ||(sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] > 100 && sensorValues[8] > 100 && sensorValues[9] > 100))//1111111000
+   else if(sensorValues[9] > 700 && sensorValues[0] < 700 && sensorValues[5] > 700)   //400
         {
-            steps_forward(20);
+            lcd.clear();
+            lcd.setCursor(0,0); 
+            lcd.print("-|  or left turn");  
+            wait();
+            delay(1000);
+          
+            wait();
+            delay(500);
+            count=0;
+            while(count<4){
+              forward();
+            }
+            wait();
+            delay(100);
+            steps_forward(15);
             wait();
             delay(500);
             
@@ -230,14 +274,52 @@ void loop() {
             wait();
             delay(500);
   }
-  
+  //handling case 5 (|-  like symbol) have to forward (have to go right if cant go forward)
+  else if(sensorValues[0] > 700 && sensorValues[9] < 700 && sensorValues[4] > 700)
+        {
+            lcd.clear();
+            lcd.setCursor(0,0); 
+            lcd.print("|- or right turn");  
+            wait();
+            delay(1000);
+          
+            wait();
+            delay(500);
+            count=0;
+            while(count<4){
+              forward();
+            }
+            wait();
+            delay(100);
+            steps_forward(15);
+            wait();
+            delay(500);
+            
+            position = qtr.readLineBlack(sensorValues);
+            //if there is no line we must go right
+            if(sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100){
+                while (sensorValues[0] < 500 || sensorValues[1] < 500) {
+                    position = qtr.readLineBlack(sensorValues);
+                    hardright();
+                }
+                wait();
+                delay(100);
+                position = qtr.readLineBlack(sensorValues);
+                while (sensorValues[4] < 300 || sensorValues[5] < 300) {
+                    position = qtr.readLineBlack(sensorValues);
+                    hardright();
+                }
+            wait();
+            delay(500);
+            }
+            //else, if there is line we must go forward
+            else{  
+                //do nothing here the bot will go forward anyway
+                //this else is not even needed, remove this later
+            }
+  }
 }
 
-
-//handling case 3 (⌜ like symbol)
-
-
-//handling case 5 (|-  like symbol)
 
 void followLine() {
   int prev_position = 0;
@@ -250,14 +332,25 @@ void followLine() {
   // print the sensor values as numbers from 0 to 1000, where 0 means maximum
   // reflectance and 1000 means minimum reflectance, followed by the line
   // position
+  String senseData="";
   for (uint8_t i = 0; i < SensorCount; i++) {
     Serial.print(sensorValues[i]);
     Serial.print('\t');
+    int temp;
+    if(sensorValues[i]>=1000)
+        temp=9;
+    else
+        temp=(int)sensorValues[i]/100;
+    senseData=senseData+temp;
   }
+  senseData=senseData+"         ";
+  lcd.setCursor(0,0); 
+  lcd.print(senseData);
+    
   Serial.println(position);
   int error;
 
-  error = position - 4500; //3500
+  error = position - 4333; //4500
   int I = (I + error) * Ki;
   int motorSpeed = (Kp * error) + (Kd * (error - lastError)) + I;
   lastError = error;
@@ -271,7 +364,7 @@ void followLine() {
   if (leftMotorSpeed < 0) leftMotorSpeed = 0;
 
   //call this when straight on the line
-  if (sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100) {
+  if (sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100){
     forward();
   } else {
     move(1, rightMotorSpeed, 1); //motor derecho hacia adelante
