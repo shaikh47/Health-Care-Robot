@@ -41,3 +41,25 @@ void loop() {
     }
     delay(100000);
 }
+
+
+
+//reverses a string
+//takes a string as input
+//reverses and returns the string
+String reverse(String strToRev){
+  int i,j;
+  char arraChar[100];
+  char temp[100];
+  String strResult="";
+  int len=strToRev.length();
+  strToRev.toCharArray(arraChar, len+1);
+
+  for(i=len-1,j=0; i>=0; i--,j++){
+    temp[j]=arraChar[i];
+  }
+  for(i=0;i<len; i++){
+    strResult=strResult+temp[i];
+  }
+  return strResult;
+}
