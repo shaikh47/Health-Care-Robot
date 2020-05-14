@@ -1,5 +1,5 @@
 
-String path="LBLLBFBLLB";     //LBLLBFBLLB
+String path="LBLLBFBLLLRBLLB";     //LBLLBFBLLB  //LBLLBFBLLLRBLLBFL
 String optimizedPaths[20]={};
 String optimizer[6]={"LBR","LBF","RBL","FBL","FBF","LBL"};
 String optimizeResult[6]={"B","R","B","R","B","F"};
@@ -9,7 +9,14 @@ void setup() {
 }
 
 void loop() {
-    int j=0;
+    Serial.println(optimizedPaths[0].length());
+    shortestPath();
+    Serial.println(optimizedPaths[0].length());
+    delay(5000);
+}
+
+void shortestPath(){
+  int j=0;
     for (int i=0; i<20; i++) {
         if(path.charAt(i) == 'B'){
             optimizedPaths[j++]=path.substring(0,i);     
@@ -39,14 +46,11 @@ void loop() {
     for (int i=0; i<len; i++) {
         Serial.println(optimizedPaths[i]);
     }
-    delay(100000);
 }
 
 
 
-//reverses a string
-//takes a string as input
-//reverses and returns the string
+//FUNCTION TO REVERSE A STRING
 String reverse(String strToRev){
   int i,j;
   char arraChar[100];
