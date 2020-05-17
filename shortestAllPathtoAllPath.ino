@@ -24,8 +24,11 @@ void setup() {
 }
 
 void loop() {
-    for(int i=0;i<5;i++)
-        bedNumber[i]=i+1;
+    bedNumber[0]=1;//setting the hospital bed number
+    bedNumber[1]=2;
+    bedNumber[2]=3;
+    bedNumber[3]=5;
+    bedNumber[4]=4;
       
   
     shortestPath(path);//call to calculate shortest path from home to all nodes
@@ -109,6 +112,16 @@ void fromToAssign(){
          pathMap[i].from=tempTo;
          pathMap[i].to=tempFrom;
     }
+
+    for (int i=count,x=0; i<count*2; i++,x++) {  //and now reverse pathing
+         String tempPath;                          //in this loop we will actually set the shortest path                       
+         String reversedTempPath;
+         
+         tempPath=pathMap[x].shortPath;
+         reversedTempPath=reverse(tempPath);//call this function to reverse the string
+
+         pathMap[i].shortPath=reversedTempPath;
+    }
     
 }
 
@@ -116,7 +129,7 @@ void fromToAssign(){
 void pathSplitter(String pathToSolve){
   int count=0;
     int j=0;
-    int endPosition[10];
+    int endPosition[30];
     
     for(int i=0;i<pathToSolve.length();i++){
       if(pathToSolve.charAt(i)=='B'){
@@ -189,4 +202,33 @@ String shortestPathToAllPath(String pathToSolve){
         }
     }
     return pathToSolve; 
+}
+
+
+
+//FUNCTION TO REVERSE A STRING
+String reverse(String strToRev){
+  int i,j;
+  char arraChar[100];
+  char temp[100];
+  String strResult="";
+  int len=strToRev.length();
+  strToRev.toCharArray(arraChar, len+1);
+
+  for(i=len-1,j=0; i>=0; i--,j++){
+    temp[j]=arraChar[i];
+  }
+
+  for(i=0;i<len;i++){  //here we will flip R,L if R then L and if L then R
+    if(temp[i] == 'L')
+      temp[i]='R';
+    else if(temp[i] == 'R'){
+      temp[i]='L';
+    }
+  }
+  
+  for(i=0;i<len; i++){
+    strResult=strResult+temp[i];
+  }
+  return strResult;
 }
