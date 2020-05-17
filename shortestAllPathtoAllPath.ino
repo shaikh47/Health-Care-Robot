@@ -1,5 +1,5 @@
 
-String path="LBLLBFBLLLRBLLB";     //LBLLBFBLLB  //LBLLBFBLLLRBLLBFL
+String path="LBLLBFBLLLRBLLB";     //LBLLBFBLLB  //LBLLBFBLLLRBLLB
 String optimizer[6]={"LBR","LBF","RBL","FBL","FBF","LBL"};
 String optimizeResult[6]={"B","R","B","R","B","F"};
 
@@ -26,18 +26,12 @@ void setup() {
 void loop() {
     for(int i=0;i<5;i++)
         bedNumber[i]=i+1;
-    fromToAssign();
-    for(int i=0;i<15;i++){
-      Serial.print(pathMap[i].from);
-      Serial.print(" ");
-      Serial.println(pathMap[i].to);
-    }
-      delay(50000);  
+      
   
     shortestPath(path);//call to calculate shortest path from home to all nodes
     pathSplitter(path);
-    Serial.println("");
-    Serial.println("_______________");
+    /*Serial.println("");
+    Serial.println("_______________");*/
     for (int i=0; i<20; i++) {
          if(pathAllNodes[i].length() != 0){
             pathAllNodes[i]=shortestPathToAllPath(pathAllNodes[i]);
@@ -46,10 +40,21 @@ void loop() {
 
 
 
-    for (int i=0; i<20; i++) {
+    /*for (int i=0; i<20; i++) {
          Serial.print(i); 
          Serial.print(" ");
          Serial.println(pathAllNodes[i]);
+    }*/
+
+
+    Serial.println("_______________");
+    fromToAssign();
+    for(int i=0;i<40;i++){
+      Serial.print(pathMap[i].from);
+      Serial.print(" ");
+      Serial.print(pathMap[i].to);
+      Serial.print(" ");
+      Serial.println(pathMap[i].shortPath);
     }
     delay(50000);
 }
@@ -77,6 +82,34 @@ void fromToAssign(){
     }
     endPoint=endPoint+j;
   }
+
+    for (int i=0; i<20; i++) {  //now store the paths in the struct map
+         if(pathAllNodes[i].length() != 0){
+            pathMap[i].shortPath=pathAllNodes[i];
+         } 
+    }
+    count=0;
+    
+    //first count what is the filled size of the struct map
+    for (int i=0; i<50; i++) {  //now counting the mapped paths how many paths have been mapped
+         if((pathMap[i].from != 0)||(pathMap[i].to != 0)){
+            count++;
+         } 
+    }
+    Serial.print("total entry: ");
+    Serial.println(count);
+
+    for (int i=count,x=0; i<count*2; i++,x++) {  //and now reverse pathing
+         byte tempFrom;                          //only the form and to is stored in this loop
+         byte tempTo;                            //we will store the actual path in the next loop
+         
+         tempFrom=pathMap[x].from;
+         tempTo=pathMap[x].to;
+
+         pathMap[i].from=tempTo;
+         pathMap[i].to=tempFrom;
+    }
+    
 }
 
 
