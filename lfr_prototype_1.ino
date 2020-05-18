@@ -2,6 +2,15 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 
+
+String pathToSolve="LBLLBFBLLLRBLLB";     //LBLLBFBLLB  //LBLLBFBLLLRBLLBFL
+String optimizer[6]={"LBR","LBF","RBL","FBL","FBF","LBL"};
+String optimizeResult[6]={"B","R","B","R","B","F"};
+
+String pathAllNodes[10][10]={};
+String optimizedPaths[10]={};
+String pathToHome[10]={};
+
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 
@@ -19,8 +28,7 @@ void forward(void);
 void backward(void);
 void hardleft(void);
 void hardright(void);
-void left(void);
-void right(void);
+
 void backleft(void);
 void backright(void);
 void wait(void);
@@ -123,13 +131,7 @@ int lastError = 0;
 
 
 void loop() {
-  uint16_t position = qtr.readLineBlack(sensorValues);
-  int parity=0;
-  for (uint8_t i = 0; i < SensorCount; i++) {
-    if(sensorValues[i]>200)
-        parity++;
-  }
-  
+  uint16_t position = qtr.readLineBlack(sensorValues); 
   followLine();
   leftHand();
 }
@@ -457,22 +459,6 @@ void hardright() {
   digitalWrite(motorleft_backward, LOW);
   digitalWrite(motorright_forward, LOW);
   digitalWrite(motorright_backward, HIGH);
-}
-void left() {
-  analogWrite(pwmleft, x);
-  analogWrite(pwmright, x);
-  digitalWrite(motorleft_forward, LOW);
-  digitalWrite(motorleft_backward, LOW);
-  digitalWrite(motorright_forward, HIGH);
-  digitalWrite(motorright_backward, LOW);
-}
-void right() {
-  analogWrite(pwmleft, x);
-  analogWrite(pwmright, x);
-  digitalWrite(motorleft_forward, HIGH);
-  digitalWrite(motorleft_backward, LOW);
-  digitalWrite(motorright_forward, LOW);
-  digitalWrite(motorright_backward, LOW);
 }
 void wait() {
   analogWrite(pwmleft, 255);
