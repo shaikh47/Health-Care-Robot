@@ -2,14 +2,24 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 
-
-String pathToSolve="LBLLBFBLLLRBLLB";     //LBLLBFBLLB  //LBLLBFBLLLRBLLBFL
+String path="LBLLBFBLLLRBLLB";
+//String pathToSolve="LBLLBFBLLLRBLLB";     //LBLLBFBLLB  //LBLLBFBLLLRBLLB
 String optimizer[6]={"LBR","LBF","RBL","FBL","FBF","LBL"};
 String optimizeResult[6]={"B","R","B","R","B","F"};
 
-String pathAllNodes[10][10]={};
-String optimizedPaths[10]={};
-String pathToHome[10]={};
+String mainQueue="";
+int learn=0; //set this true to enter into learned mode, false to enter into learning mode
+byte bedNumber[40]={};
+
+String pathAllNodes[30]={};
+
+struct mappedPath{
+  byte from;
+  byte to;
+  String shortPath;
+};
+
+struct mappedPath pathMap[50];
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
@@ -38,7 +48,6 @@ String str;
 char data = 0;
 const byte interruptPin = 2;
 
-String path="";
 
 int x = 30;
 int y = 255;
@@ -123,17 +132,47 @@ void setup() {
 
   time = millis();
   lcd.clear();
+
+  for(int i=0;i<40;i++)
+        bedNumber[i]=255;  //by default we are inputing 255 to all array elements to denote that they are empty
+
+  //temporary
+    bedNumber[0]=1;//setting the hospital bed number
+    bedNumber[1]=2;
+    bedNumber[2]=3;
+    bedNumber[3]=5;
+    bedNumber[4]=4;
 }
 
-volatile long int count = 0;
+volatile long int counter = 0;
 int lastError = 0;
 
 
 
-void loop() {
+void loop() { 
   uint16_t position = qtr.readLineBlack(sensorValues); 
+  int flag=0;
   followLine();
   leftHand();
+
+  if(learn){
+    String opPath=pathProvider(2, 5);//load the path to solve  set from and to 0 is home always
+
+    lcd.clear();
+    lcd.setCursor(0,0); //we start writing from the first row first column
+    lcd.print(opPath); //16 characters poer line
+
+    insertInQueue(opPath);//load the path to queue
+    delay(4000);
+    flag=1;
+  }
+     
+  while(flag){   //execute this portion when entered into learned mode
+    position = qtr.readLineBlack(sensorValues); 
+    followLine();
+    solvedRun();
+  }
+
 }
 
 
@@ -165,7 +204,8 @@ void leftHand(){
     if((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100))
     {
         wait();  //just wait for now
-        delay(1000);
+        delay(500);
+        learn=1;
         String pathTwo="";
           //display the path array
             lcd.clear();
@@ -176,9 +216,23 @@ void leftHand(){
               lcd.setCursor(1,1);
               lcd.print(pathTwo);
             }  
-            while(1){
-              
+            //call all the path optimization methods here
+            shortestPath(path);//call to calculate shortest path from home to all nodes
+            pathSplitter(path);
+            for (int i=0; i<20; i++) {
+                 if(pathAllNodes[i].length() != 0){
+                    pathAllNodes[i]=shortestPathToAllPath(pathAllNodes[i]);
+                 } 
             }
+            
+            fromToAssign();  //this function seems to be malfunctioning
+            
+            steps_hardleft(77);//rotate 180 degrees
+            wait();
+            delay(5000);
+           
+             
+            
     }
     //paste
     //handling the case where we see a T intersection
@@ -235,8 +289,8 @@ void leftHand(){
     wait();
     delay(1000);
     
-    count = 0; // reset the value of count
-    while (count < 18) { //advance forward for 20 steps
+    counter = 0; // reset the value of count
+    while (counter < 18) { //advance forward for 20 steps
       forward();
     }
     wait();
@@ -277,7 +331,7 @@ void leftHand(){
             wait();
             delay(500);
   }
-  //handling case 5 (|-  like symbol) have to forward (have to go right if cant go forward)
+  //handling case 5 (|-  like symbol) have to forward (have to go forward if cant go forward go right)
   else if(sensorValues[0] > 900 && sensorValues[9] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
         {
             lcd.clear();
@@ -371,8 +425,8 @@ void followLine() {
 }
 
 void steps_hardleft(int steps) {
-  count = 0;
-  while (count <= steps) { //77steps for 180 degree
+  counter = 0;
+  while (counter <= steps) { //77steps for 180 degree
     hardleft();
   }
   wait();
@@ -380,8 +434,8 @@ void steps_hardleft(int steps) {
 }
 
 void steps_hardright(int steps) {
-  count = 0;
-  while (count < steps) { //77steps for 180 degree
+  counter = 0;
+  while (counter < steps) { //77steps for 180 degree
     hardright();
   }
   wait();
@@ -389,8 +443,8 @@ void steps_hardright(int steps) {
 }
 
 void steps_forward(int steps) {
-  count = 0;
-  while (count < steps) {
+  counter = 0;
+  while (counter < steps) {
     followLine();
   }
   wait();
@@ -398,7 +452,7 @@ void steps_forward(int steps) {
 }
 
 void encoder() {
-  count++;
+  counter++;
   //Serial.println(_count);
 }
 
@@ -467,4 +521,307 @@ void wait() {
   digitalWrite(motorleft_backward, LOW);
   digitalWrite(motorright_forward, LOW);
   digitalWrite(motorright_backward, LOW);
+}
+
+
+
+
+void fromToAssign(){
+  //int i,j;
+  int count=0;
+  byte endPoint=0;
+  for(int i1=0;i1<40;i1++){  //count the number of beds
+    if(bedNumber[i1] != 255){
+      count++;
+    }
+  }
+  
+  for(int i1=0;i1<count;i1++){ //assign for home to any path
+    pathMap[i1].from=0;  //set fixed number '0' because we are denoting 0 as home
+    pathMap[i1].to=bedNumber[i1]; //set destination according to the bedArray
+    endPoint++;
+  }
+  int iLocal,jLocal;
+  for(iLocal=0;iLocal<count-1;iLocal++){      //now storing the path lables from one node to others
+    for(jLocal=0;jLocal<count-iLocal-1;jLocal++){  //home is not here
+       pathMap[jLocal+endPoint].from=bedNumber[iLocal];  //also reverse pathing is not here also   
+       pathMap[jLocal+endPoint].to=bedNumber[iLocal+jLocal+1];
+    }
+    endPoint=endPoint+jLocal;
+  }
+
+    for (int i1=0; i1<20; i1++) {  //now store the paths in the struct map
+         if(pathAllNodes[i1].length() != 0){
+            pathMap[i1].shortPath=pathAllNodes[i1];
+         } 
+    }
+    count=0;
+    
+    //first count what is the filled size of the struct map
+    for (int i1=0; i1<50; i1++) {  //now counting the mapped paths how many paths have been mapped
+         if((pathMap[i1].from != 0)||(pathMap[i1].to != 0)){
+            count++;
+         } 
+    }
+    Serial.print("total entry: ");
+    Serial.println(count);
+
+    for (int i1=count,x1=0; i1<count*2; i1++,x1++) {  //and now reverse pathing
+         byte tempFrom;                          //only the form and to is stored in this loop
+         byte tempTo;                            //we will store the actual path in the next loop
+         
+         tempFrom=pathMap[x1].from;
+         tempTo=pathMap[x1].to;
+
+         pathMap[i1].from=tempTo;
+         pathMap[i1].to=tempFrom;
+    }
+
+    for (int i1=count,x1=0; i1<count*2; i1++,x1++) {  //and now reverse pathing
+         String tempPath;                          //in this loop we will actually set the shortest path                       
+         String reversedTempPath;
+         
+         tempPath=pathMap[x1].shortPath;
+         reversedTempPath=reverse(tempPath);//call this function to reverse the string
+
+         pathMap[i1].shortPath=reversedTempPath;
+    }    
+}
+
+
+//this function just provides the path by taking input a from and to destination
+String pathProvider(byte from, byte to){
+  int i;
+  for(i=0;i<50;i++){
+     if(pathMap[i].from==from && pathMap[i].to==to)
+        return pathMap[i].shortPath;                   
+  }
+  return "error";
+}
+
+void pathSplitter(String pathToSolve){
+  int count=0;
+    int j=0;
+    int endPosition[30];
+    
+    for(int i=0;i<pathToSolve.length();i++){
+      if(pathToSolve.charAt(i)=='B'){
+        count++;
+        endPosition[j++]=i;
+      }
+    }
+
+    int x=0;
+    for(int i=0;i<40;i++){  //searching free index from where value will be stored
+      if(pathAllNodes[i].length()==0){
+        x=i;
+        break;
+      }
+    }
+    
+    for (int i=0; i<count; i++) {
+       for (int k=i+1; k<count; k++) {
+         pathAllNodes[x]=pathToSolve.substring(endPosition[i]+1,endPosition[k]);
+         Serial.println(pathAllNodes[x]);  
+         Serial.print("   ");
+         Serial.print(x);
+         Serial.println(" ");
+         x++;
+      } 
+    }
+}
+
+
+
+void shortestPath(String pathToSolve){
+  int j=0;
+    for (int i=0; i<pathToSolve.length(); i++) {
+        if(pathToSolve.charAt(i) == 'B'){
+            pathAllNodes[j++]=pathToSolve.substring(0,i);     
+        }
+    }
+
+    int len=0;
+    for (int i=0; i<pathToSolve.length(); i++) {
+        if(pathAllNodes[i].length()!=0)
+            len++;
+    }
+    for (int i=0; i<len; i++) {
+        //Serial.println(optimizedPaths[i]);
+    }
+    //main work starts from here
+    for (int i=0; i<len; i++) {
+           
+            for(int x=0; x<pathAllNodes[i].length(); x++){
+                
+                for(int k=0; k<6; k++){
+                    pathAllNodes[i].replace(optimizer[k], optimizeResult[k]);
+                }
+        } 
+    }
+    
+    for (int i=0; i<len; i++) {
+        Serial.println(pathAllNodes[i]);
+    }
+}
+
+
+String shortestPathToAllPath(String pathToSolve){
+  int j=0;
+   //main work starts from here 
+    for(int x=0; x<pathToSolve.length(); x++){        
+        for(int k=0; k<6; k++){
+            pathToSolve.replace(optimizer[k], optimizeResult[k]);
+        }
+    }
+    return pathToSolve; 
+}
+
+
+
+//FUNCTION TO REVERSE A STRING
+String reverse(String strToRev){
+  int i,j;
+  char arraChar[100];
+  char temp[100];
+  String strResult="";
+  int len=strToRev.length();
+  strToRev.toCharArray(arraChar, len+1);
+
+  for(i=len-1,j=0; i>=0; i--,j++){
+    temp[j]=arraChar[i];
+  }
+
+  for(i=0;i<len;i++){  //here we will flip R,L if R then L and if L then R
+    if(temp[i] == 'L')
+      temp[i]='R';
+    else if(temp[i] == 'R'){
+      temp[i]='L';
+    }
+  }
+  
+  for(i=0;i<len; i++){
+    strResult=strResult+temp[i];
+  }
+  return strResult;
+}
+
+
+//call this function to insert a string into queue
+void insertInQueue(String stringToQueue){
+  mainQueue=stringToQueue;
+}
+
+char deQueue(){
+  char deqeuedElement=mainQueue.charAt(0);   //dequesd element to return
+  if(mainQueue.length()==0)
+    return 'E';
+  mainQueue.remove(0, 1);  //remove the element from the queue
+  return deqeuedElement;
+}
+
+
+
+void solvedRun(){
+  uint16_t position;
+  position = qtr.readLineBlack(sensorValues);
+  //foreign code
+  //handling case 1 ('+' intersection  and  'T'  like intersection  and  dead end)
+  //below if handles the situation if bot sees black on all the sensors
+  if ((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100)) 
+    {
+    steps_forward(22); //after seeing plus intersection go forward for 24 steps
+    wait(); //wait a bit
+    position = qtr.readLineBlack(sensorValues); //read the line again
+    delay(100); //wait for 100 ms
+    
+  //now dequeue to see where we have to go
+  char pathWay=deQueue();
+  whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
+  
+  }//end of black line condition
+
+  //handling the case for no line. when the robot see's no line(case 0)
+  else if (sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100)
+  { 
+    steps_forward(20);
+    wait();
+    delay(100);
+  //now dequeue to see where we have to go
+  char pathWay=deQueue();
+  whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
+    
+  }
+  //handling case 4 (-|  like symbol  and  case 2 (⌝ like section)) no matter what we have to go left
+   else if(sensorValues[9] > 900 && sensorValues[0] < 200 && (sensorValues[5] > 900 || sensorValues[6] > 900))   //400
+        {
+            steps_forward(20);
+            wait();
+            delay(500);
+      //now dequeue to see where we have to go
+      char pathWay=deQueue();
+      whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
+
+  }
+  //handling case 5 (|-  like symbol) have to forward (have to go right if cant go forward)
+  else if(sensorValues[0] > 900 && sensorValues[9] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
+        {
+            steps_forward(20);
+            wait();
+            delay(500);
+            //now dequeue to see where we have to go
+      char pathWay=deQueue();
+      whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
+            
+        }
+
+}            
+
+void whereToGo(char pathWay){
+    uint16_t position = qtr.readLineBlack(sensorValues);
+  if(pathWay == 'F'){
+    //do nothing here the bot will go forward anyway
+  }
+  else if(pathWay == 'R'){
+    while (sensorValues[0] < 500 || sensorValues[1] < 500) {
+            position = qtr.readLineBlack(sensorValues);
+            hardright();
+        }
+        wait();
+        delay(100);
+        position = qtr.readLineBlack(sensorValues);
+        while (sensorValues[4] < 300 || sensorValues[5] < 300) {
+            position = qtr.readLineBlack(sensorValues);
+            hardright();
+        }
+        wait();
+        delay(500);
+  }
+  else if(pathWay == 'L'){
+    position = qtr.readLineBlack(sensorValues);
+    while ((sensorValues[9] < 500 || sensorValues[8] < 500)) { //if the if is true which means it is '+' intersection
+      position = qtr.readLineBlack(sensorValues);
+      hardleft();
+    }
+      wait();
+      delay(100);
+      position = qtr.readLineBlack(sensorValues);
+      while ((sensorValues[4] < 100 || sensorValues[5] < 100)) { //center the bot with the line
+      position = qtr.readLineBlack(sensorValues);
+      hardleft();
+      }
+      wait();
+      delay(500);
+  }
+  else if(pathWay == 'E'){
+    //here it means that the bot has reached its desired destination
+    //for now just keep it empty with an infinte loop
+    while(1){
+      wait();
+      lcd.clear();
+      lcd.setCursor(0,0); 
+      lcd.print("END OF THE RUN");
+      delay(100);
+    }
+  }
 }
