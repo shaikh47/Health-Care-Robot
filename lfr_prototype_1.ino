@@ -2,8 +2,8 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 
-String path="LBLLBFBLLLRBLLB";
-//String pathToSolve="LBLLBFBLLLRBLLB";     //LBLLBFBLLB  //LBLLBFBLLLRBLLB
+String path="";
+//String pathToSolve="LBLLBFBLLLRBLLB";   //LBLLBFBLLLRBLLB
 String optimizer[6]={"LBR","LBF","RBL","FBL","FBF","LBL"};
 String optimizeResult[6]={"B","R","B","R","B","F"};
 
@@ -24,9 +24,9 @@ struct mappedPath pathMap[50];
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 
-#define Kp 0.01 //  0.01 works okay   0.05 works good  
-#define Kd 0.39 //  0.39
-#define Ki 0.06 // 0.06
+#define Kp 0.013 //  0.013 works okay(best)   0.01 works good  try D and I gain 0 with p=0.01
+#define Kd 0.009 //  0.009
+#define Ki 0.004 // 0.004
 
 #define MaxSpeed 40 // max speed of the robot (40)
 #define BaseSpeed 35 // this is the speed at which the motors should spin when the robot is perfectly on the line  (35)
@@ -116,7 +116,6 @@ void setup() {
     Serial.print(' ');
   }
   Serial.println();
-
   // print the calibration maximum values measured when emitters were on
   for (uint8_t i = 0; i < SensorCount; i++) {
     Serial.print(qtr.calibrationOn.maximum[i]);
@@ -295,7 +294,7 @@ void leftHand(){
     }
     wait();
     delay(100);
-    while (sensorValues[3] < 100 || sensorValues[4] < 100) {
+    while (sensorValues[4] < 100) {
       position = qtr.readLineBlack(sensorValues);
       hardleft();
     }
