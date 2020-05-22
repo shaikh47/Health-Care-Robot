@@ -12,6 +12,11 @@ int learn=0; //set this true to enter into learned mode, false to enter into lea
 byte bedNumber[40]={};
 int bedNumberArrayIndex=0; //this variable tracks the index number of the bednumber array
 
+int sourceIndicator=0;  /*this variable keeps track of the source of the bot. Basically which node the bot is currently in.
+                         initially after the calibration run it should be assigned to 0 because 0 signifies as home.*/
+int destinationIndicator;/*this variable keeps track of the destination of the bot. Basically which node the bot is will go to.
+                         doesnt need to assign a value to it as user will give input before every run.*/
+
 String pathAllNodes[30]={};
 
 struct mappedPath{
@@ -163,14 +168,18 @@ int lastError = 0;
 
 
 
+int flagSolvedRun=0;  //this variable determines if the bot will run in solved mode
 void loop() { 
-  uint16_t position = qtr.readLineBlack(sensorValues); 
-  int flag=0;
-  followLine();
-  leftHand();
+  uint16_t position;
+  if(learn==0){
+    position = qtr.readLineBlack(sensorValues); 
+    followLine();
+    leftHand();
+  }
 
   if(learn){
-    String opPath=pathProvider(2, 5);//load the path to solve  set from and to 0 is home always
+    destinationIndicator=buttonPress();
+    String opPath=pathProvider(sourceIndicator, destinationIndicator);//load the path to solve  set from and to 0 is home always
 
     lcd.clear();
     lcd.setCursor(0,0); //we start writing from the first row first column
@@ -178,13 +187,13 @@ void loop() {
 
     insertInQueue(opPath);//load the path to queue
     delay(4000);
-    flag=1;
+    flagSolvedRun=1;
   }
      
-  while(flag){   //execute this portion when entered into learned mode
+  while(flagSolvedRun==1){   //execute this portion when entered into learned mode
     position = qtr.readLineBlack(sensorValues); 
     followLine();
-    solvedRun();
+    solvedRun();  //to make solved run always insert the path to be followed with "insertInQueue()" method
   }
 
 }
@@ -276,9 +285,9 @@ void leftHand(){
                  } 
             }
             
-            fromToAssign();  //this function seems to be malfunctioning
+            fromToAssign();  
             
-            steps_hardleft(77);//rotate 180 degrees
+            steps_hardleft(80);//rotate 180 degrees
             wait();
             delay(5000);
            
@@ -345,7 +354,7 @@ void leftHand(){
     delay(1000);
     
     counter = 0; // reset the value of count
-    while (counter < 18) { //advance forward for 20 steps
+    while (counter < 21) { //advance forward for 20 steps
       forward();
     }
     wait();
@@ -799,7 +808,7 @@ void solvedRun(){
   //handling the case for no line. when the robot see's no line(case 0)
   else if (sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100)
   { 
-    steps_forward(20);
+    steps_forward(22);
     wait();
     delay(100);
   //now dequeue to see where we have to go
@@ -810,7 +819,7 @@ void solvedRun(){
   //handling case 4 (-|  like symbol  and  case 2 (⌝ like section)) no matter what we have to go left
    else if(sensorValues[9] > 900 && sensorValues[0] < 200 && (sensorValues[5] > 900 || sensorValues[6] > 900))   //400
         {
-            steps_forward(20);
+            steps_forward(22);
             wait();
             delay(500);
       //now dequeue to see where we have to go
@@ -821,7 +830,7 @@ void solvedRun(){
   //handling case 5 (|-  like symbol) have to forward (have to go right if cant go forward)
   else if(sensorValues[0] > 900 && sensorValues[9] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
         {
-            steps_forward(20);
+            steps_forward(22);
             wait();
             delay(500);
             //now dequeue to see where we have to go
@@ -871,12 +880,13 @@ void whereToGo(char pathWay){
   else if(pathWay == 'E'){
     //here it means that the bot has reached its desired destination
     //for now just keep it empty with an infinte loop
-    while(1){
+      steps_hardleft(80);//rotate 180 degrees
       wait();
       lcd.clear();
       lcd.setCursor(0,0); 
       lcd.print("END OF THE RUN");
-      delay(100);
-    }
+      flagSolvedRun=0;
+      delay(1000);
+      sourceIndicator=destinationIndicator;
   }
 }
