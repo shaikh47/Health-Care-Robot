@@ -10,6 +10,7 @@ String optimizeResult[6]={"B","R","B","R","B","F"};
 String mainQueue="";
 int learn=0; //set this true to enter into learned mode, false to enter into learning mode
 byte bedNumber[40]={};
+int bedNumberArrayIndex=0; //this variable tracks the index number of the bednumber array
 
 String pathAllNodes[30]={};
 
@@ -46,8 +47,17 @@ void wait(void);
 
 String str;
 char data = 0;
-const byte interruptPin = 2;
+const byte interruptPin = 2;  //interrupt pin
 
+//button variables
+const int decreButton = 7;  
+const int increButton = 6;
+const int backButton = 5;
+const int okButton = 4;  //okay button
+int decreButtonState = 0; 
+int increButtonState = 0; 
+int backButtonState = 0; 
+int okButtonState = 0; 
 
 int x = 30;
 int y = 255;
@@ -80,6 +90,11 @@ void setup() {
   pinMode(motorleft_backward, OUTPUT);
   pinMode(motorright_forward, OUTPUT);
   pinMode(motorright_backward, OUTPUT);
+
+  pinMode(decreButton, INPUT);
+  pinMode(increButton, INPUT);
+  pinMode(backButton, INPUT);
+  pinMode(okButton, INPUT);
 
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(0, encoder, FALLING);
@@ -136,11 +151,11 @@ void setup() {
         bedNumber[i]=255;  //by default we are inputing 255 to all array elements to denote that they are empty
 
   //temporary
-    bedNumber[0]=1;//setting the hospital bed number
+    /*bedNumber[0]=1;//setting the hospital bed number
     bedNumber[1]=2;
     bedNumber[2]=3;
     bedNumber[3]=5;
-    bedNumber[4]=4;
+    bedNumber[4]=4;*/
 }
 
 volatile long int counter = 0;
@@ -159,7 +174,7 @@ void loop() {
 
     lcd.clear();
     lcd.setCursor(0,0); //we start writing from the first row first column
-    lcd.print(opPath); //16 characters poer line
+    lcd.print(opPath); //16 characters per line
 
     insertInQueue(opPath);//load the path to queue
     delay(4000);
@@ -176,7 +191,44 @@ void loop() {
 
 
 
-
+//returns the pressed bednumber
+int buttonPress(){
+    int bedNumb=0;
+    lcd.clear();
+    lcd.setCursor(0,0); 
+    lcd.print("ENTER BED NUMBER");
+    lcd.setCursor(0,1);
+    lcd.print(bedNumb);
+     
+    okButtonState = digitalRead(okButton);
+    while(okButtonState==1){
+      decreButtonState = digitalRead(decreButton); 
+      increButtonState = digitalRead(increButton);
+      backButtonState = digitalRead(backButton);
+      okButtonState = digitalRead(okButton);
+      
+      if(decreButtonState==0){
+        bedNumb--;
+        if(bedNumb<0)
+          bedNumb=0;
+        lcd.setCursor(0,1);
+        lcd.print(bedNumb);
+        delay(500);
+      }
+      else if(increButtonState==0){
+        bedNumb++;
+        lcd.setCursor(0,1);
+        lcd.print(bedNumb);
+        delay(500);
+      }
+    }
+    lcd.clear();
+    lcd.setCursor(0,0);
+    String tempMsg=String(bedNumb)+"  PRESSED"; 
+    lcd.print(tempMsg);
+    delay(1000);
+    return bedNumb;
+}
 
 
 
@@ -281,6 +333,10 @@ void leftHand(){
   //handling the case for no line. when the robot see's no line(case 0)
   else if (sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100)
   {
+    wait(); //stop the bot                        
+                                                   //get the bednumber from the user
+    bedNumber[bedNumberArrayIndex++]=buttonPress();  //store the bed number in the main bednumber array
+
     path=path+"B";
     lcd.clear();
     lcd.setCursor(0,0); 
