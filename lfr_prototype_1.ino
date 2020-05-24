@@ -30,12 +30,12 @@ struct mappedPath pathMap[50];
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
 
-#define Kp 0.013 //  0.013 works okay(best)   0.01 works good  try D and I gain 0 with p=0.01
-#define Kd 0.009 //  0.009
-#define Ki 0.004 // 0.004
+#define Kp 0.015 //  0.013 works okay(best)   0.01 works good  try D and I gain 0 with p=0.01
+#define Kd 0.012 //  0.012
+#define Ki 0.008 // 0.006
 
-#define MaxSpeed 40 // max speed of the robot (40)
-#define BaseSpeed 35 // this is the speed at which the motors should spin when the robot is perfectly on the line  (35)
+#define MaxSpeed 50 // max speed of the robot (40)
+#define BaseSpeed 45 // this is the speed at which the motors should spin when the robot is perfectly on the line  (35)
 #define NUM_SENSORS 10 // number of sensors used
 
 #define speedturn 180
@@ -55,16 +55,12 @@ char data = 0;
 const byte interruptPin = 2;  //interrupt pin
 
 //button variables
-const int decreButton = 7;  
-const int increButton = 6;
-const int backButton = 5;
 const int okButton = 4;  //okay button
-int decreButtonState = 0; 
-int increButtonState = 0; 
-int backButtonState = 0; 
+const int potPin = A0;
+
 int okButtonState = 0; 
 
-int x = 30;
+int x = 37;  //30
 int y = 255;
 int flag = 0;
 
@@ -96,9 +92,6 @@ void setup() {
   pinMode(motorright_forward, OUTPUT);
   pinMode(motorright_backward, OUTPUT);
 
-  pinMode(decreButton, INPUT);
-  pinMode(increButton, INPUT);
-  pinMode(backButton, INPUT);
   pinMode(okButton, INPUT);
 
   pinMode(interruptPin, INPUT_PULLUP);
@@ -112,21 +105,52 @@ void setup() {
   qtr.setSensorPins((const uint8_t[]) {35,37,39,41,43,45,47,49,51,53}, SensorCount); //53,51,49,47,45,43,41,39,37,35
   //qtr.setEmitterPin(2);                                                             //35,37,39,41,43,45,47,49,51,53
 
-  lcd.setCursor(0,0); //we start writing from the first row first column
-  lcd.print("CALIBRATING!"); //16 characters poer line
-
   delay(500);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // turn on Arduino's LED to indicate we are in calibration mode
   analogWrite(11, 0);
   analogWrite(10, 0);
 
+    okButtonState = digitalRead(okButton);
+    lcd.clear();
+    lcd.setCursor(0,0); 
+    lcd.print("PRESS TO START");
+    lcd.setCursor(0,1); 
+    lcd.print("CALIBRATION:");
+    while(okButtonState==1){
+      okButtonState = digitalRead(okButton);
+    }
+    lcd.clear();
+    delay(500);
+    
+    lcd.setCursor(0,0); //we start writing from the first row first column
+    lcd.print("CALIBRATING!"); //16 characters poer line
+  
   // 2.5 ms RC read timeout (default) * 10 reads per calibrate() call
   // = ~25 ms per calibrate() call.
   // Call calibrate() 100 times to make calibration take about 10 seconds.
   for (uint16_t i = 0; i < 150; i++) {
     qtr.calibrate();
+    if(i>0 && i<=30)
+      hardleft();
+    else if(i>30 && i<=60)
+      hardright();
+    else if(i>60 && i<=90)
+      hardleft();
+    else if(i>90 && i<=120)
+      hardright();
+    else if(i>120 && i<=150)
+      hardleft();
   }
+  wait();
+  delay(500);
+  uint16_t position = qtr.readLineBlack(sensorValues);
+  while (sensorValues[4] < 300 || sensorValues[5] < 300) {
+    position = qtr.readLineBlack(sensorValues);
+    hardright();
+  }
+    wait();
+    delay(500);
   digitalWrite(LED_BUILTIN, LOW); // turn off Arduino's LED to indicate we are through with calibration
 
   // print the calibration minimum values measured when emitters were on
@@ -161,6 +185,15 @@ void setup() {
     bedNumber[2]=3;
     bedNumber[3]=5;
     bedNumber[4]=4;*/
+    okButtonState = digitalRead(okButton);
+    lcd.clear();
+    lcd.setCursor(0,0); //we start writing from the first row first column
+    lcd.print("PRESS TO START"); //16 characters per line
+    lcd.setCursor(0,1); //we start writing from the first row first column
+    lcd.print("LOCALIZATION"); //16 characters per line
+    while(okButtonState==1){
+      okButtonState = digitalRead(okButton);
+    }
 }
 
 volatile long int counter = 0;
@@ -179,6 +212,7 @@ void loop() {
 
   if(learn){
     destinationIndicator=buttonPress();
+
     String opPath=pathProvider(sourceIndicator, destinationIndicator);//load the path to solve  set from and to 0 is home always
 
     lcd.clear();
@@ -203,33 +237,23 @@ void loop() {
 //returns the pressed bednumber
 int buttonPress(){
     int bedNumb=0;
+    int potValue,outputValue;
     lcd.clear();
     lcd.setCursor(0,0); 
     lcd.print("ENTER BED NUMBER");
     lcd.setCursor(0,1);
     lcd.print(bedNumb);
-     
-    okButtonState = digitalRead(okButton);
+
+    potValue = analogRead(potPin);
+    outputValue = map(potValue, 7, 1023, 0, 9); 
+    okButtonState = digitalRead(okButton); 
     while(okButtonState==1){
-      decreButtonState = digitalRead(decreButton); 
-      increButtonState = digitalRead(increButton);
-      backButtonState = digitalRead(backButton);
+      potValue = analogRead(potPin);
+      outputValue = map(potValue, 7, 1023, 0, 9);
       okButtonState = digitalRead(okButton);
-      
-      if(decreButtonState==0){
-        bedNumb--;
-        if(bedNumb<0)
-          bedNumb=0;
         lcd.setCursor(0,1);
+        bedNumb=outputValue; 
         lcd.print(bedNumb);
-        delay(500);
-      }
-      else if(increButtonState==0){
-        bedNumb++;
-        lcd.setCursor(0,1);
-        lcd.print(bedNumb);
-        delay(500);
-      }
     }
     lcd.clear();
     lcd.setCursor(0,0);
@@ -254,7 +278,7 @@ void leftHand(){
     lcd.setCursor(0,0); 
     lcd.print("ALL BLACK!");  
     wait();
-    delay(1000);
+    delay(200);
     steps_forward(22); //after seeing plus intersection go forward for 24 steps
     wait(); //wait a bit
     position = qtr.readLineBlack(sensorValues); //read the line again
@@ -289,7 +313,7 @@ void leftHand(){
             
             steps_hardleft(80);//rotate 180 degrees
             wait();
-            delay(5000);
+            delay(3000);
            
              
             
@@ -304,7 +328,7 @@ void leftHand(){
       lcd.setCursor(0,0); 
       lcd.print("T INTER");  
       wait();
-      delay(1000);
+      delay(200);
     
       position = qtr.readLineBlack(sensorValues);
         while (sensorValues[3] < 150 || sensorValues[4] < 150) {   //move left while the bot finds the line
@@ -321,7 +345,7 @@ void leftHand(){
       lcd.setCursor(0,0); 
       lcd.print("PLUS INTER");
       wait();
-      delay(1000);
+      delay(200);
       
       while ((sensorValues[9] < 500 || sensorValues[8] < 500)) { //if the if is true which means it is '+' intersection
         position = qtr.readLineBlack(sensorValues);
@@ -335,7 +359,7 @@ void leftHand(){
         hardleft();
       }
       wait();
-      delay(500);
+      delay(200);
     }
   }//end of black line condition
 
@@ -351,7 +375,7 @@ void leftHand(){
     lcd.setCursor(0,0); 
     lcd.print("ROTATE NO LINE");  
     wait();
-    delay(1000);
+    delay(300);
     
     counter = 0; // reset the value of count
     while (counter < 21) { //advance forward for 20 steps
@@ -359,26 +383,27 @@ void leftHand(){
     }
     wait();
     delay(100);
+    position = qtr.readLineBlack(sensorValues);
     while (sensorValues[4] < 100) {
       position = qtr.readLineBlack(sensorValues);
       hardleft();
     }
     wait();
-    delay(500);
+    delay(200);
   }
   //handling case 4 (-|  like symbol  and  case 2 (⌝ like section)) no matter what we have to go left
-   else if(sensorValues[9] > 900 && sensorValues[0] < 200 && (sensorValues[5] > 900 || sensorValues[6] > 900))   //400
+   else if(sensorValues[9] > 900 && sensorValues[2] < 200 && (sensorValues[5] > 900 || sensorValues[6] > 900))   //400
         {
             path=path+"L";
             lcd.clear();
             lcd.setCursor(0,0); 
             lcd.print("-|  or left turn");  
             wait();
-            delay(1000);
+            delay(200);
           
             steps_forward(19);
             wait();
-            delay(500);
+            delay(200);
             
             position = qtr.readLineBlack(sensorValues);
             while (sensorValues[9] < 500 || sensorValues[8] < 500) {
@@ -393,20 +418,20 @@ void leftHand(){
               hardleft();
             }
             wait();
-            delay(500);
+            delay(200);
   }
   //handling case 5 (|-  like symbol) have to forward (have to go forward if cant go forward go right)
-  else if(sensorValues[0] > 900 && sensorValues[9] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
+  else if(sensorValues[0] > 900 && sensorValues[7] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
         {
             lcd.clear();
             lcd.setCursor(0,0); 
             lcd.print("|- or right turn");  
             wait();
-            delay(1000);
+            delay(200);
           
             steps_forward(19);
             wait();
-            delay(500);
+            delay(200);
             
             position = qtr.readLineBlack(sensorValues);
             //if there is no line we must go right
@@ -424,7 +449,7 @@ void leftHand(){
                     hardright();
                 }
             wait();
-            delay(500);
+            delay(200);
             }
             //else, if there is line we must go forward
             else{  
@@ -792,7 +817,7 @@ void solvedRun(){
   //foreign code
   //handling case 1 ('+' intersection  and  'T'  like intersection  and  dead end)
   //below if handles the situation if bot sees black on all the sensors
-  if ((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100)) 
+  if ((sensorValues[0] > 200 && sensorValues[9] > 200) || (sensorValues[1] > 200 && sensorValues[8] > 200)) 
     {
     steps_forward(22); //after seeing plus intersection go forward for 24 steps
     wait(); //wait a bit
@@ -821,7 +846,7 @@ void solvedRun(){
         {
             steps_forward(22);
             wait();
-            delay(500);
+            delay(100);
       //now dequeue to see where we have to go
       char pathWay=deQueue();
       whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
@@ -832,7 +857,7 @@ void solvedRun(){
         {
             steps_forward(22);
             wait();
-            delay(500);
+            delay(100);
             //now dequeue to see where we have to go
       char pathWay=deQueue();
       whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
@@ -859,7 +884,7 @@ void whereToGo(char pathWay){
             hardright();
         }
         wait();
-        delay(500);
+        delay(100);
   }
   else if(pathWay == 'L'){
     position = qtr.readLineBlack(sensorValues);
@@ -875,12 +900,12 @@ void whereToGo(char pathWay){
       hardleft();
       }
       wait();
-      delay(500);
+      delay(100);
   }
   else if(pathWay == 'E'){
     //here it means that the bot has reached its desired destination
     //for now just keep it empty with an infinte loop
-      steps_hardleft(80);//rotate 180 degrees
+      steps_hardleft(77);//rotate 180 degrees
       wait();
       lcd.clear();
       lcd.setCursor(0,0); 
