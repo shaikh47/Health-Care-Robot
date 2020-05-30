@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>IOT SOUND MONITOR</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.9.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.9.1/firebase-database.js"></script>
+    <script src="http://bernii.github.io/gauge.js/dist/gauge.min.js"></script>
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script> 
+    <link rel="stylesheet" href="styles.css">
+    
+   
+</head>
+
+<body>
+    <h2>HTML Forms</h2>
+    <div class="content">
+        <form id="form">
+          <input type="text" id="med" placeholder="MEDICINE NAME"><br>
+          <input type="text" id="dose" placeholder="DOSAGE"><br>
+          <input type="time" id="clockTime" placeholder="TIME"><br><br>
+         
+          <input type="radio" id="before_meal" name="meal" checked="checked" value="Before meal">
+          <label for="before_meal">BEFORE MEAL</label><br>
+
+          <input type="radio" id="after_meal" name="meal" value="After meal">
+          <label for="after_meal">AFTER MEAL</label><br>
+        	
+          <button id="but1">SUBMIT</button>
+           
+
+        </form> 
+
+         <p>BELOW WILL SHOW THE DATABASE RESULTS</p>
+    </div>
+<div class="container">
+    
+</div>
+
+</body>
+<script src="saveData.js"></script>
+</html>
