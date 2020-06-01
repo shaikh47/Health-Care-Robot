@@ -10,6 +10,7 @@ var firebaseConfig = { //firebase cdn code
 firebase.initializeApp(firebaseConfig);
 
 
+site=localStorage.getItem('bedNumber');  //get the passed data
 
 const medicine = document.getElementById('med');
 const dosage = document.getElementById('dose');
@@ -17,6 +18,8 @@ const clockTime = document.getElementById('clockTime');
 const form = document.getElementById('form');
 const btn1 = document.getElementById('but1');
 
+//var pathMain='alternate';
+var pathMain='main/'+site+'/med/';
 
 let container = document.querySelector('.container');
 let ul = document.createElement('ul');
@@ -27,7 +30,7 @@ var elementKeys = [];
 
 const database = firebase.database();
 
-var ref = database.ref('alternate');
+var ref = database.ref(pathMain);
 ref.on('value', gotData, errData);
 
 function gotData(data) { //this function retrieves the data from firebase
@@ -84,12 +87,12 @@ function gotData(data) { //this function retrieves the data from firebase
             var order = res[1]; //res[0] has btn and res[1] has the number
             console.log(res[1]);
 
-            var ref = firebase.database().ref("alternate");
+            var ref = firebase.database().ref(pathMain);
             ref.orderByKey().on("child_added", function(snapshot) {
                 elementKeys.push(snapshot.key);
             });
             console.log(elementKeys[order]);
-            var path = 'alternate/' + elementKeys[order];
+            var path = pathMain+ '/' + elementKeys[order];
             database.ref(path).remove();
         });
 
@@ -110,7 +113,7 @@ btn1.addEventListener('click', (e) => { //alternate saving
         container.removeChild(ul); //remove the list before saving a new entry
     //so there wont be any duplicate values
     dummyItems = []; // also empty the array
-    var ref = database.ref('/alternate/');
+    var ref = database.ref('/'+pathMain+'/');
 
     //radio buttons
     var temp_meal;

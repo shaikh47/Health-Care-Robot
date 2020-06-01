@@ -69,7 +69,7 @@ function gotData(data) { //this function retrieves the data from firebase
             //var res = id.split("_"); //btn_0 spliting in order to get the number only
             console.log(id); 
            localStorage.setItem('bedNumber',id);
-           window.location='file:///C:/Users/shaikh/Desktop/web%20eng/nodemcu/working_but_do_test_only_here/finalYearProject/bedEditPage/bedEditPage.html';
+           window.location='file:///C:/Users/shaikh/Desktop/web%20eng/nodemcu/working_but_do_test_only_here/finalYearProjectWebPage/medicinePage/saveData.html?meal=Before+meal';
         });
 
     });
