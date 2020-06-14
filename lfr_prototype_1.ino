@@ -1,9 +1,15 @@
 #include <QTRSensors.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
+#include <EEPROM.h>
+
+int eeAddressPath = 0;   //Location we want the path data to be put.
+int eeAddressBed = 500;   //Location we want the bed number data to be put.
 
 String path="";
-//String pathToSolve="LBLLBFBLLLRBLLB";   //LBLLBFBLLLRBLLB
+char pathArrayTemp[100];
+
+//"LBLLBFBLLLRBLLB";   //LBLLBFBLLLRBLLB
 String optimizer[6]={"LBR","LBF","RBL","FBL","FBF","LBL"};
 String optimizeResult[6]={"B","R","B","R","B","F"};
 
@@ -34,8 +40,8 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 #define Kd 0.012 //  0.012
 #define Ki 0.008 // 0.006
 
-#define MaxSpeed 50 // max speed of the robot (40)
-#define BaseSpeed 45 // this is the speed at which the motors should spin when the robot is perfectly on the line  (35)
+#define MaxSpeed 40 // max speed of the robot (40)
+#define BaseSpeed 35 // this is the speed at which the motors should spin when the robot is perfectly on the line  (35)
 #define NUM_SENSORS 10 // number of sensors used
 
 #define speedturn 180
@@ -56,11 +62,14 @@ const byte interruptPin = 2;  //interrupt pin
 
 //button variables
 const int okButton = 4;  //okay button
-const int potPin = A0;
+const int incButton = 5;
+const int decButton = 7;
 
-int okButtonState = 0; 
+int okButtonState = 0;
+int incButtonState = 0;
+int decButtonState = 0; 
 
-int x = 37;  //30
+int x = 32;  //30
 int y = 255;
 int flag = 0;
 
@@ -117,7 +126,7 @@ void setup() {
     lcd.print("PRESS TO START");
     lcd.setCursor(0,1); 
     lcd.print("CALIBRATION:");
-    while(okButtonState==1){
+    while(okButtonState==0){
       okButtonState = digitalRead(okButton);
     }
     lcd.clear();
@@ -179,21 +188,95 @@ void setup() {
   for(int i=0;i<40;i++)
         bedNumber[i]=255;  //by default we are inputing 255 to all array elements to denote that they are empty
 
-  //temporary
-    /*bedNumber[0]=1;//setting the hospital bed number
-    bedNumber[1]=2;
-    bedNumber[2]=3;
-    bedNumber[3]=5;
-    bedNumber[4]=4;*/
+    int optionVariable=0;
+    //startup option menu
+      lcd.clear();
+      lcd.setCursor(0,0); 
+      lcd.print("SELECT OPTION:");
+   
+      okButtonState = digitalRead(okButton);
+      incButtonState = digitalRead(incButton);
+      decButtonState = digitalRead(decButton); 
+      
+      while(okButtonState==0){
+        okButtonState = digitalRead(okButton);
+        incButtonState = digitalRead(incButton);
+        decButtonState = digitalRead(decButton);
+
+          if(optionVariable==0){
+            lcd.setCursor(0,1);
+            lcd.print("NEW LOCALIZATION");
+          }
+          else if(optionVariable==1){
+            lcd.setCursor(0,1);
+            lcd.print("LOAD PATH        ");
+          }
+  
+          if(incButtonState==1){
+            optionVariable++;
+            optionVariable = constrain(optionVariable, 0, 1);
+          }
+          else if(decButtonState==1){
+            optionVariable--;
+            optionVariable = constrain(optionVariable, 0, 1);
+          }
+      }
+      lcd.clear();
+      delay(500);
+
+    if(optionVariable==0){  //performing task based on the chosen option
+      learn=0;              //here if this is selected we will calibrate the path from beginning
+    }
+    else if(optionVariable==1){ //here if this is selected we will load previously calibrated path from EEPROM
+      learn=1;
+      path = read_String(0);//load path from EEPROM
+      EEPROM.get(500, bedNumber);//load bednumber from EEPROM
+      
+
+
+      String pathTwo="";
+      //display the path array
+      lcd.clear();
+      lcd.setCursor(0,0); 
+      lcd.print(path);
+        if(path.length()>16){
+           pathTwo=path.substring(16);
+           lcd.setCursor(1,1);
+           lcd.print(pathTwo);
+       }
+       delay(5000);
+      
+      
+      
+      //call all the path optimization methods here
+      shortestPath(path);//call to calculate shortest path from home to all nodes
+      pathSplitter(path);
+      for (int i=0; i<20; i++) {
+          if(pathAllNodes[i].length() != 0){
+              pathAllNodes[i]=shortestPathToAllPath(pathAllNodes[i]);
+          } 
+      }
+      fromToAssign();       
+    }
+    
+    
+    
+    //temporary
+    //bedNumber[0]=1;//setting the hospital bed number
+    //bedNumber[1]=2;
+    //bedNumber[2]=3;
+    //bedNumber[3]=4;
+    //bedNumber[4]=5;
     okButtonState = digitalRead(okButton);
     lcd.clear();
     lcd.setCursor(0,0); //we start writing from the first row first column
     lcd.print("PRESS TO START"); //16 characters per line
     lcd.setCursor(0,1); //we start writing from the first row first column
     lcd.print("LOCALIZATION"); //16 characters per line
-    while(okButtonState==1){
+    while(okButtonState==0){
       okButtonState = digitalRead(okButton);
     }
+    delay(500);
 }
 
 volatile long int counter = 0;
@@ -211,16 +294,17 @@ void loop() {
   }
 
   if(learn){
-    destinationIndicator=buttonPress();
+    destinationIndicator=buttonPress();   //call this when using buttons to take inputs
+    //destinationIndicator=piCommunicator();  //call this when using pi to take inputs
 
     String opPath=pathProvider(sourceIndicator, destinationIndicator);//load the path to solve  set from and to 0 is home always
 
     lcd.clear();
     lcd.setCursor(0,0); //we start writing from the first row first column
     lcd.print(opPath); //16 characters per line
-
+    delay(1000);
+    
     insertInQueue(opPath);//load the path to queue
-    delay(4000);
     flagSolvedRun=1;
   }
      
@@ -232,25 +316,51 @@ void loop() {
 
 }
 
+int piCommunicator(){
+  int temp;
+  Serial.println("SEND");
+  while(1){    
+    if(Serial.available()>0){
+      String a=Serial.readStringUntil('\n');
+      temp=a.toInt();
+      break;
+    }
+    delay(5);
+  }
+  Serial.println("RECEIVED");
+  return temp;
+}
 
 
 //returns the pressed bednumber
 int buttonPress(){
     int bedNumb=0;
-    int potValue,outputValue;
+    int outputValue=0;
     lcd.clear();
     lcd.setCursor(0,0); 
     lcd.print("ENTER BED NUMBER");
     lcd.setCursor(0,1);
     lcd.print(bedNumb);
 
-    potValue = analogRead(potPin);
-    outputValue = map(potValue, 7, 1023, 0, 9); 
-    okButtonState = digitalRead(okButton); 
-    while(okButtonState==1){
-      potValue = analogRead(potPin);
-      outputValue = map(potValue, 7, 1023, 0, 9);
+    
+    okButtonState = digitalRead(okButton);
+    incButtonState = digitalRead(incButton);
+    decButtonState = digitalRead(decButton); 
+    while(okButtonState==0){
       okButtonState = digitalRead(okButton);
+      incButtonState = digitalRead(incButton);
+      decButtonState = digitalRead(decButton);
+
+        if(incButtonState==1){
+          outputValue++;
+          delay(300);
+        }
+        else if(decButtonState==1){
+          outputValue--;
+          delay(300);
+        }
+
+        outputValue = constrain(outputValue, 0, 40);
         lcd.setCursor(0,1);
         bedNumb=outputValue; 
         lcd.print(bedNumb);
@@ -287,6 +397,11 @@ void leftHand(){
     //paste
     if((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100))
     {
+        
+       
+        writeString(0, path);  //Address 0 and String type data
+                               //store the newly learned path to EEPROM
+        EEPROM.put(500, bedNumber);//store the newly learned bed numbers to EEPROM
         wait();  //just wait for now
         delay(500);
         learn=1;
@@ -308,15 +423,11 @@ void leftHand(){
                     pathAllNodes[i]=shortestPathToAllPath(pathAllNodes[i]);
                  } 
             }
-            
             fromToAssign();  
             
             steps_hardleft(80);//rotate 180 degrees
             wait();
-            delay(3000);
-           
-             
-            
+            delay(500);       
     }
     //paste
     //handling the case where we see a T intersection
@@ -384,7 +495,7 @@ void leftHand(){
     wait();
     delay(100);
     position = qtr.readLineBlack(sensorValues);
-    while (sensorValues[4] < 100) {
+    while (sensorValues[6] < 100) {
       position = qtr.readLineBlack(sensorValues);
       hardleft();
     }
@@ -914,4 +1025,33 @@ void whereToGo(char pathWay){
       delay(1000);
       sourceIndicator=destinationIndicator;
   }
+}
+
+void writeString(char add,String data)
+{
+  int _size = data.length();
+  int i;
+  for(i=0;i<_size;i++)
+  {
+    EEPROM.write(add+i,data[i]);
+  }
+  EEPROM.write(add+_size,'\0');   //Add termination null character for String Data
+}
+
+
+String read_String(char add)
+{
+  int i;
+  char data[100]; //Max 100 Bytes
+  int len=0;
+  unsigned char k;
+  k=EEPROM.read(add);
+  while(k != '\0' && len<500)   //Read until null character
+  {    
+    k=EEPROM.read(add+len);
+    data[len]=k;
+    len++;
+  }
+  data[len]='\0';
+  return String(data);
 }
