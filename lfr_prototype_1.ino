@@ -34,15 +34,19 @@ struct mappedPath{
 struct mappedPath pathMap[50];
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
-
-
-#define Kp 0.015 //  0.013 works okay(best)   0.01 works good  try D and I gain 0 with p=0.01
+/*#define Kp 0.015 //  0.013 works okay(best)   0.01 works good  try D and I gain 0 with p=0.01
 #define Kd 0.012 //  0.012
-#define Ki 0.008 // 0.006
+#define Ki 0.008 // 0.006*/
 
-#define MaxSpeed 40 // max speed of the robot (40)
-#define BaseSpeed 35 // this is the speed at which the motors should spin when the robot is perfectly on the line  (35)
+#define Kp 0.016 //  0.013 works okay(best)   0.01 works good  try D and I gain 0 with p=0.01
+#define Kd 0.012 //  0.012
+#define Ki 0.009 // 0.006
+
+#define MaxSpeed 50 // max speed of the robot (40)
+#define BaseSpeed 45 // this is the speed at which the motors should spin when the robot is perfectly on the line  (35)
 #define NUM_SENSORS 10 // number of sensors used
+int x = 35;  //30
+
 
 #define speedturn 180
 
@@ -69,7 +73,7 @@ int okButtonState = 0;
 int incButtonState = 0;
 int decButtonState = 0; 
 
-int x = 32;  //30
+
 int y = 255;
 int flag = 0;
 
@@ -80,6 +84,8 @@ int motorright_backward = 13;
 
 int pwmleft = 10;
 int pwmright = 11;
+
+int collisionSense = 33;
 
 int led = 25;
 
@@ -102,6 +108,7 @@ void setup() {
   pinMode(motorright_backward, OUTPUT);
 
   pinMode(okButton, INPUT);
+  pinMode(collisionSense, INPUT);
 
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(0, encoder, FALLING);
@@ -180,7 +187,7 @@ void setup() {
   lcd.clear();
   lcd.print("DONE!");
   wait();
-  delay(1000);
+  delay(300);
 
   time = millis();
   lcd.clear();
@@ -353,17 +360,24 @@ int buttonPress(){
 
         if(incButtonState==1){
           outputValue++;
+          
+          outputValue = constrain(outputValue, 0, 40);
+          lcd.setCursor(0,1);
+          bedNumb=outputValue; 
+          lcd.print(bedNumb);
+
           delay(300);
         }
         else if(decButtonState==1){
           outputValue--;
+                    
+          outputValue = constrain(outputValue, 0, 40);
+          lcd.setCursor(0,1);
+          bedNumb=outputValue; 
+          lcd.print(bedNumb);
+
           delay(300);
         }
-
-        outputValue = constrain(outputValue, 0, 40);
-        lcd.setCursor(0,1);
-        bedNumb=outputValue; 
-        lcd.print(bedNumb);
     }
     lcd.clear();
     lcd.setCursor(0,0);
@@ -486,7 +500,7 @@ void leftHand(){
     lcd.setCursor(0,0); 
     lcd.print("ROTATE NO LINE");  
     wait();
-    delay(300);
+    delay(100);
     
     counter = 0; // reset the value of count
     while (counter < 21) { //advance forward for 20 steps
@@ -495,7 +509,7 @@ void leftHand(){
     wait();
     delay(100);
     position = qtr.readLineBlack(sensorValues);
-    while (sensorValues[6] < 100) {
+    while (sensorValues[4] < 300 || sensorValues[5] < 300) {
       position = qtr.readLineBlack(sensorValues);
       hardleft();
     }
@@ -573,12 +587,19 @@ void leftHand(){
 
 void followLine() {
   int prev_position = 0;
+
+  int collisionState = digitalRead(collisionSense);
+  while(collisionState==1){
+    collisionState = digitalRead(collisionSense);
+    wait();
+  }
+  
   //detachInterrupt(digitalPinToInterrupt(interruptPin));
   // read calibrated sensor values and obtain a measure of the line position
   // from 0 to 5000 (for a white line, use readLineWhite() instead)
   uint16_t position;
   position = qtr.readLineBlack(sensorValues);
-
+  
   // print the sensor values as numbers from 0 to 1000, where 0 means maximum
   // reflectance and 1000 means minimum reflectance, followed by the line
   // position
