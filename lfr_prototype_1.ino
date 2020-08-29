@@ -3,6 +3,35 @@
 #include <LiquidCrystal_I2C.h>
 #include <EEPROM.h>
 
+//function definition
+int buttonPress(void);//returns the bednumber that is pressed
+void leftHand(void);//holds all the logic to follow the line when it's not straight 
+void followLine(void);//for straight line following
+                      //also holds the collision avoidance logic
+void steps_hardleft(int steps);//turns left for given 'n' steps
+void steps_hardright(int steps);//turns right for given 'n' steps void steps_forward(int steps);
+                                //goes forward for given 'n' steps
+void encoder(void);//to keep track of the encoder step count
+void move(int motor, int speed, int direction);//necessary for straight line following
+
+void forward(void); //moves the bot forward
+void backward(void);//moves the bot backward
+void hardleft(void); // moves the bot left
+void hardright(void);//moves the bot right
+void wait(void);//breaks the bot and stops
+
+void fromToAssign(void);//assigns all shortest paths from all nodes to all nodes in the c data structure 'struct'
+String pathProvider(byte from, byte to);//provides the shortest path as a string when given 'from' path and 'to' path
+void pathSplitter(String pathToSolve);//splits the main path string by taking into accounts of the 'stop' paths
+void shortestPath(String pathToSolve);//converts the ambiguous paths to shortest paths
+void solvedRun(void); //runs the bot after memorizing the maze
+void whereToGo(char pathWay);//used in solvedRun, also this function contains field which is needed to do something after reaching a certain destination
+void writeString(char add,String data);//used to write data to EEPROM
+void writeString(char add,String data);//used to read string from the EEPROM
+//function definition
+
+
+
 int eeAddressPath = 0;   //Location we want the path data to be put.
 int eeAddressBed = 500;   //Location we want the bed number data to be put.
 
@@ -305,7 +334,12 @@ void loop() {
     //destinationIndicator=piCommunicator();  //call this when using pi to take inputs
 
     String opPath=pathProvider(sourceIndicator, destinationIndicator);//load the path to solve  set from and to 0 is home always
+    while(opPath=="error"){
+      destinationIndicator=buttonPress();
+      opPath=pathProvider(sourceIndicator, destinationIndicator);
+    }
 
+    
     lcd.clear();
     lcd.setCursor(0,0); //we start writing from the first row first column
     lcd.print(opPath); //16 characters per line
@@ -411,8 +445,6 @@ void leftHand(){
     //paste
     if((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100))
     {
-        
-       
         writeString(0, path);  //Address 0 and String type data
                                //store the newly learned path to EEPROM
         EEPROM.put(500, bedNumber);//store the newly learned bed numbers to EEPROM
@@ -813,6 +845,8 @@ void fromToAssign(){
 //this function just provides the path by taking input a from and to destination
 String pathProvider(byte from, byte to){
   int i;
+  if(from == to)
+    return "error";
   for(i=0;i<50;i++){
      if(pathMap[i].from==from && pathMap[i].to==to)
         return pathMap[i].shortPath;                   
