@@ -12,11 +12,33 @@ firebase.initializeApp(firebaseConfig);
 
 site=localStorage.getItem('bedNumber');  //get the passed data
 
+function onLoadFirebase() {
+    var dtTemp = {
+        deliverGood: "-1"
+    }
+    var dtTemp1 = {
+        sendBot: "-1"
+    }
+    var ref = database.ref("botDELIVER");
+    ref.set(dtTemp);
+    ref = database.ref("botSEND");
+    ref.set(dtTemp1);
+}
+
+
 const medicine = document.getElementById('med');
 const dosage = document.getElementById('dose');
 const clockTime = document.getElementById('clockTime');
 const form = document.getElementById('form');
 const btn1 = document.getElementById('but1');
+
+const btnSend = document.getElementById('send');
+const btnDeliver = document.getElementById('deliver');
+const btnReturn = document.getElementById('return');
+//foreign code
+document.getElementById("deliver").innerHTML = "DELIVER GOODS "+"("+site+")";
+document.getElementById("send").innerHTML = "SEND BOT "+"("+site+")";
+//foreign code
 
 //var pathMain='alternate';
 var pathMain='main/'+site+'/med/';
@@ -137,5 +159,46 @@ btn1.addEventListener('click', (e) => { //alternate saving
     form.reset();
 });
 
+
+
+btnSend.addEventListener('click', (e) => { //alternate saving
+    e.preventDefault();
+    
+    var strT=site.slice(11, site.length)
+    
+    var data = {
+        sendBot: strT
+    }
+    e.preventDefault();
+    console.log("sending");
+    var ref = database.ref("botSEND");
+    ref.set(data);
+});
+
+btnDeliver.addEventListener('click', (e) => { //alternate saving
+    e.preventDefault();
+    console.log("delivering");
+    
+    var strT=site.slice(11, site.length)
+    
+    var data = {
+        deliverGood: strT
+    }
+    e.preventDefault();
+    console.log("sending");
+    var ref = database.ref("botDELIVER");
+    ref.set(data);
+});
+
+btnReturn.addEventListener('click', (e) => { //alternate saving
+    e.preventDefault();
+    var data = {
+        sendBot: "0"
+    }
+    e.preventDefault();
+    console.log("return");
+    var ref = database.ref("botSEND");
+    ref.set(data);
+});
 //const some = document.querySelector('#form');
 //console.log(some.textContent);

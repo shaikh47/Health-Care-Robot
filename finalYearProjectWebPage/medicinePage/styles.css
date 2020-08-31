@@ -76,3 +76,14 @@ button{
     text-align: center;
     width: 30%;
 }
+
+.botControl button{
+    text-align: left;
+    margin: auto;
+    display: table;
+    padding: 10px;
+    text-align: center;
+    width: 30%;
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
