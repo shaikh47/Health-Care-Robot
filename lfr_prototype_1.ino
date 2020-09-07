@@ -4,6 +4,7 @@
 #include <EEPROM.h>
 
 //function definition
+void botModeChange(void);//uses an interrupt on pin 3 to sense a button and change the bot mode
 int buttonPress(void);//returns the bednumber that is pressed
 void leftHand(void);//holds all the logic to follow the line when it's not straight 
 void followLine(void);//for straight line following
@@ -27,9 +28,12 @@ void shortestPath(String pathToSolve);//converts the ambiguous paths to shortest
 void solvedRun(void); //runs the bot after memorizing the maze
 void whereToGo(char pathWay);//used in solvedRun, also this function contains field which is needed to do something after reaching a certain destination
 void writeString(char add,String data);//used to write data to EEPROM
-void writeString(char add,String data);//used to read string from the EEPROM
+String read_String(char add);//used to read string from the EEPROM
+void postBedData(String dataToPost);//takes in a string of bednumbers seperated by '$' and sends it to raspberry pi
 //function definition
 
+int modeChangeVariable=0;
+int deliveryMode=0;//sets the delivery mode of the robot
 
 
 int eeAddressPath = 0;   //Location we want the path data to be put.
@@ -91,10 +95,11 @@ void wait(void);
 
 String str;
 char data = 0;
-const byte interruptPin = 2;  //interrupt pin
+const byte interruptPin = 2;  //interrupt pin for encoder
+const byte modeChange=3; //interrupt pin for mode change button
 
 //button variables
-const int okButton = 4;  //okay button
+const int okButton = 6;  //okay button
 const int incButton = 5;
 const int decButton = 7;
 
@@ -102,6 +107,10 @@ int okButtonState = 0;
 int incButtonState = 0;
 int decButtonState = 0; 
 
+//light variables
+const byte redLight = 52;
+const byte greenLight = 50;
+const byte blueLight = 48;
 
 int y = 255;
 int flag = 0;
@@ -136,11 +145,19 @@ void setup() {
   pinMode(motorright_forward, OUTPUT);
   pinMode(motorright_backward, OUTPUT);
 
+  pinMode(redLight,OUTPUT);
+  pinMode(blueLight,OUTPUT);
+  pinMode(greenLight,OUTPUT);
+
+  pinMode(incButton,INPUT);
+  pinMode(decButton,INPUT);
   pinMode(okButton, INPUT);
   pinMode(collisionSense, INPUT);
 
+  pinMode(modeChange, INPUT);
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(0, encoder, FALLING);
+  attachInterrupt(1, botModeChange, RISING);
   //hardleft();
   lcd.begin(16,2);
   lcd.backlight();
@@ -201,17 +218,17 @@ void setup() {
   // print the calibration minimum values measured when emitters were on
   Serial.begin(9600);
   for (uint8_t i = 0; i < SensorCount; i++) {
-    Serial.print(qtr.calibrationOn.minimum[i]);
-    Serial.print(' ');
+    //Serial.print(qtr.calibrationOn.minimum[i]);
+    //Serial.print(' ');
   }
-  Serial.println();
+  //Serial.println();
   // print the calibration maximum values measured when emitters were on
   for (uint8_t i = 0; i < SensorCount; i++) {
-    Serial.print(qtr.calibrationOn.maximum[i]);
-    Serial.print(' ');
+    //Serial.print(qtr.calibrationOn.maximum[i]);
+    //Serial.print(' ');
   }
-  Serial.println();
-  Serial.println();
+  //Serial.println();
+  //Serial.println();
 
   lcd.clear();
   lcd.print("DONE!");
@@ -321,6 +338,7 @@ int lastError = 0;
 
 
 int flagSolvedRun=0;  //this variable determines if the bot will run in solved mode
+
 void loop() { 
   uint16_t position;
   if(learn==0){
@@ -330,8 +348,8 @@ void loop() {
   }
 
   if(learn){
-    destinationIndicator=buttonPress();   //call this when using buttons to take inputs
-    //destinationIndicator=piCommunicator();  //call this when using pi to take inputs
+    //destinationIndicator=buttonPress();   //call this when using buttons to take inputs
+    destinationIndicator=piCommunicator();  //call this when using pi to take inputs
 
     String opPath=pathProvider(sourceIndicator, destinationIndicator);//load the path to solve  set from and to 0 is home always
     while(opPath=="error"){
@@ -359,17 +377,35 @@ void loop() {
 
 int piCommunicator(){
   int temp;
-  Serial.println("SEND");
+  String a;
+  Serial.print("DONE");
   while(1){    
     if(Serial.available()>0){
-      String a=Serial.readStringUntil('\n');
+      a=Serial.readStringUntil('\n');
       temp=a.toInt();
       break;
     }
     delay(5);
   }
-  Serial.println("RECEIVED");
-  return temp;
+  Serial.print("BUSY");
+  int from=0;
+  String xs[6];
+  int i1=0;
+  int len=a.length();
+    for(int i=0;i<len;i++){
+      if(a.charAt(i)=='$'){
+        xs[i1]=a.substring(from,i);
+        from=++i;
+        i1++;
+      }
+    }
+  
+  if(xs[0]=="deliverGood")
+    deliveryMode=0;
+  else
+    deliveryMode=1;
+    
+  return xs[1].toInt();//the bed number
 }
 
 
@@ -435,8 +471,8 @@ void leftHand(){
     lcd.clear();
     lcd.setCursor(0,0); 
     lcd.print("ALL BLACK!");  
-    wait();
-    delay(200);
+    //wait();
+    //delay(200);
     steps_forward(22); //after seeing plus intersection go forward for 24 steps
     wait(); //wait a bit
     position = qtr.readLineBlack(sensorValues); //read the line again
@@ -445,6 +481,14 @@ void leftHand(){
     //paste
     if((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100))
     {
+
+        //upload the bed data to the raspberry pi
+        String tempVarBed="";
+        for(int bedIteration=0; bedIteration<bedNumberArrayIndex; bedIteration++){
+          tempVarBed=tempVarBed+bedNumber[bedIteration]+"$";
+        }
+        postBedData(tempVarBed);//have to send the bed data as string seperated by '$' sign(sample data to send "1$2$3$4$5$6$7$")
+        //upload the bed data to the raspberry pi
         writeString(0, path);  //Address 0 and String type data
                                //store the newly learned path to EEPROM
         EEPROM.put(500, bedNumber);//store the newly learned bed numbers to EEPROM
@@ -484,8 +528,8 @@ void leftHand(){
       lcd.clear();
       lcd.setCursor(0,0); 
       lcd.print("T INTER");  
-      wait();
-      delay(200);
+      //wait();
+      //delay(200);
     
       position = qtr.readLineBlack(sensorValues);
         while (sensorValues[3] < 150 || sensorValues[4] < 150) {   //move left while the bot finds the line
@@ -531,8 +575,8 @@ void leftHand(){
     lcd.clear();
     lcd.setCursor(0,0); 
     lcd.print("ROTATE NO LINE");  
-    wait();
-    delay(100);
+    //wait();
+    //delay(100);
     
     counter = 0; // reset the value of count
     while (counter < 21) { //advance forward for 20 steps
@@ -555,27 +599,27 @@ void leftHand(){
             lcd.clear();
             lcd.setCursor(0,0); 
             lcd.print("-|  or left turn");  
-            wait();
-            delay(200);
+            //wait();
+            //delay(200);
           
             steps_forward(19);
-            wait();
-            delay(200);
+            //wait();
+            //delay(200);
             
             position = qtr.readLineBlack(sensorValues);
             while (sensorValues[9] < 500 || sensorValues[8] < 500) {
               position = qtr.readLineBlack(sensorValues);
               hardleft();
             }
-            wait();
-            delay(100);
+            //wait();
+            //delay(100);
             position = qtr.readLineBlack(sensorValues);
             while (sensorValues[4] < 300 || sensorValues[5] < 300) {
               position = qtr.readLineBlack(sensorValues);
               hardleft();
             }
-            wait();
-            delay(200);
+            //wait();
+            //delay(200);
   }
   //handling case 5 (|-  like symbol) have to forward (have to go forward if cant go forward go right)
   else if(sensorValues[0] > 900 && sensorValues[7] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
@@ -583,12 +627,12 @@ void leftHand(){
             lcd.clear();
             lcd.setCursor(0,0); 
             lcd.print("|- or right turn");  
-            wait();
-            delay(200);
+            //wait();
+            //delay(200);
           
             steps_forward(19);
-            wait();
-            delay(200);
+            //wait();
+            //delay(200);
             
             position = qtr.readLineBlack(sensorValues);
             //if there is no line we must go right
@@ -598,15 +642,15 @@ void leftHand(){
                     position = qtr.readLineBlack(sensorValues);
                     hardright();
                 }
-                wait();
-                delay(100);
+                //wait();
+                //delay(100);
                 position = qtr.readLineBlack(sensorValues);
                 while (sensorValues[4] < 300 || sensorValues[5] < 300) {
                     position = qtr.readLineBlack(sensorValues);
                     hardright();
                 }
-            wait();
-            delay(200);
+            //wait();
+            //delay(200);
             }
             //else, if there is line we must go forward
             else{  
@@ -637,8 +681,8 @@ void followLine() {
   // position
   String senseData="";
   for (uint8_t i = 0; i < SensorCount; i++) {
-    Serial.print(sensorValues[i]);
-    Serial.print('\t');
+    //Serial.print(sensorValues[i]);
+    //Serial.print('\t');
     int temp;
     if(sensorValues[i]>=1000)
         temp=9;
@@ -650,7 +694,7 @@ void followLine() {
   lcd.setCursor(0,0); 
   lcd.print(senseData);
     
-  Serial.println(position);
+  //Serial.println(position);
   int error;
 
   error = position - 4333; //4500
@@ -701,12 +745,12 @@ void steps_forward(int steps) {
     followLine();
   }
   wait();
-  delay(500);
+  //delay(500);
 }
 
 void encoder() {
   counter++;
-  //Serial.println(_count);
+  //Serial.println(counter);
 }
 
 void move(int motor, int speed, int direction) {
@@ -816,8 +860,8 @@ void fromToAssign(){
             count++;
          } 
     }
-    Serial.print("total entry: ");
-    Serial.println(count);
+    //Serial.print("total entry: ");
+    //Serial.println(count);
 
     for (int i1=count,x1=0; i1<count*2; i1++,x1++) {  //and now reverse pathing
          byte tempFrom;                          //only the form and to is stored in this loop
@@ -877,10 +921,10 @@ void pathSplitter(String pathToSolve){
     for (int i=0; i<count; i++) {
        for (int k=i+1; k<count; k++) {
          pathAllNodes[x]=pathToSolve.substring(endPosition[i]+1,endPosition[k]);
-         Serial.println(pathAllNodes[x]);  
-         Serial.print("   ");
-         Serial.print(x);
-         Serial.println(" ");
+         //Serial.println(pathAllNodes[x]);  
+         //Serial.print("   ");
+         //Serial.print(x);
+         //Serial.println(" ");
          x++;
       } 
     }
@@ -916,7 +960,7 @@ void shortestPath(String pathToSolve){
     }
     
     for (int i=0; i<len; i++) {
-        Serial.println(pathAllNodes[i]);
+        //Serial.println(pathAllNodes[i]);
     }
 }
 
@@ -981,14 +1025,12 @@ void solvedRun(){
   uint16_t position;
   position = qtr.readLineBlack(sensorValues);
   //foreign code
-  //handling case 1 ('+' intersection  and  'T'  like intersection  and  dead end)
-  //below if handles the situation if bot sees black on all the sensors
   if ((sensorValues[0] > 200 && sensorValues[9] > 200) || (sensorValues[1] > 200 && sensorValues[8] > 200)) 
     {
     steps_forward(22); //after seeing plus intersection go forward for 24 steps
     wait(); //wait a bit
     position = qtr.readLineBlack(sensorValues); //read the line again
-    delay(100); //wait for 100 ms
+    //delay(100); //wait for 100 ms
     
   //now dequeue to see where we have to go
   char pathWay=deQueue();
@@ -1000,8 +1042,8 @@ void solvedRun(){
   else if (sensorValues[0] < 100 && sensorValues[1] < 100 && sensorValues[2] < 100 && sensorValues[3] < 100 && sensorValues[4] < 100 && sensorValues[5] < 100 && sensorValues[6] < 100 && sensorValues[7] < 100 && sensorValues[8] < 100 && sensorValues[9] < 100)
   { 
     steps_forward(22);
-    wait();
-    delay(100);
+    //wait();
+    //delay(100);
   //now dequeue to see where we have to go
   char pathWay=deQueue();
   whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
@@ -1011,8 +1053,8 @@ void solvedRun(){
    else if(sensorValues[9] > 900 && sensorValues[0] < 200 && (sensorValues[5] > 900 || sensorValues[6] > 900))   //400
         {
             steps_forward(22);
-            wait();
-            delay(100);
+            //wait();
+            //delay(100);
       //now dequeue to see where we have to go
       char pathWay=deQueue();
       whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
@@ -1022,8 +1064,8 @@ void solvedRun(){
   else if(sensorValues[0] > 900 && sensorValues[9] < 200 && (sensorValues[4] > 900 || sensorValues[3] > 900))
         {
             steps_forward(22);
-            wait();
-            delay(100);
+            //wait();
+            //delay(100);
             //now dequeue to see where we have to go
       char pathWay=deQueue();
       whereToGo(pathWay);  //call this function, it will rotate the bot to the required location
@@ -1042,15 +1084,15 @@ void whereToGo(char pathWay){
             position = qtr.readLineBlack(sensorValues);
             hardright();
         }
-        wait();
-        delay(100);
+        //wait();
+        //delay(100);
         position = qtr.readLineBlack(sensorValues);
         while (sensorValues[4] < 300 || sensorValues[5] < 300) {
             position = qtr.readLineBlack(sensorValues);
             hardright();
         }
-        wait();
-        delay(100);
+        //wait();
+        //delay(100);
   }
   else if(pathWay == 'L'){
     position = qtr.readLineBlack(sensorValues);
@@ -1058,15 +1100,15 @@ void whereToGo(char pathWay){
       position = qtr.readLineBlack(sensorValues);
       hardleft();
     }
-      wait();
-      delay(100);
+      //wait();
+      //delay(100);
       position = qtr.readLineBlack(sensorValues);
       while ((sensorValues[4] < 100 || sensorValues[5] < 100)) { //center the bot with the line
       position = qtr.readLineBlack(sensorValues);
       hardleft();
       }
-      wait();
-      delay(100);
+      //wait();
+      //delay(100);
   }
   else if(pathWay == 'E'){
     //here it means that the bot has reached its desired destination
@@ -1109,4 +1151,47 @@ String read_String(char add)
   }
   data[len]='\0';
   return String(data);
+}
+
+void postBedData(String dataToPost){
+  Serial.println("BED DATA");
+  while(1){
+    if(Serial.available()>0) {
+      String a = Serial.readStringUntil('$');
+      if(a=="SEND DATA"){
+        delay(100);
+        Serial.println(dataToPost);  //send the bed data
+        break;
+      }
+    }
+  }
+}
+
+
+void botModeChange(){
+    static unsigned long last_interrupt_time = 0;
+    unsigned long interrupt_time = millis();
+    // If interrupts come faster than 200ms, assume it's a bounce and ignore
+    if (interrupt_time - last_interrupt_time > 200){
+      if(modeChangeVariable==0){
+    digitalWrite(redLight,HIGH);
+    digitalWrite(greenLight,LOW);
+    digitalWrite(blueLight,LOW);
+    modeChangeVariable=1;
+  }
+  else if(modeChangeVariable==1){
+    digitalWrite(redLight,LOW);
+    digitalWrite(greenLight,HIGH);
+    digitalWrite(blueLight,LOW);
+    modeChangeVariable=2;
+  }
+  else if(modeChangeVariable==2){
+    digitalWrite(redLight,LOW);
+    digitalWrite(greenLight,LOW);
+    digitalWrite(blueLight,HIGH);
+    modeChangeVariable=0;
+  }
+    }
+       
+    last_interrupt_time = interrupt_time;
 }
