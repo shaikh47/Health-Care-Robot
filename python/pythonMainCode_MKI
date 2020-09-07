@@ -1,8 +1,8 @@
-
 import serial
 import time
 from random import randint
 import csv
+import turtle
 import pyrebase
 import json
 from datetime import datetime
@@ -19,7 +19,17 @@ firebase = pyrebase.initialize_app(config)
 db = firebase.database()
 
 ser=serial.Serial('/dev/ttyUSB0',baudrate=9600,timeout=1)
-time.sleep(3)
+time.sleep(1)
+
+arduinoBusyFlag=0
+
+listOfDict=[]
+myDict={}
+timeFlag=0
+countBed=0
+bedList=[]
+
+queue = [] #initialize queue
 
 firstTimeFlag=0 #variable to avoid data streaming from happening at the first time
 
@@ -33,7 +43,6 @@ def stream_handler(message): #this should be put before any code
 
     strData = strData.replace("\'", "\"")
     dict=json.loads(strData)
-
     # My dictionary
     for i, j in dict.items():
         command=i
@@ -46,6 +55,46 @@ def stream_handler(message): #this should be put before any code
         #print(strMsgToSend)
 
 my_stream = db.child("botCONTROL").stream(stream_handler)  #enter the path name in the quotes
+
+
+
+#below block is used for the autonomous medicine deliver
+all_users = db.child("main").get()  #gets all the available beds
+for user in all_users.each():
+    #print(user.key()) #prints the bed names eg. BED NUMBER_1
+    bedList.append(user.key())
+    countBed=countBed+1 #counts the number of total beds
+
+#print(bedList)
+
+
+def multiplicacyChecker(x):  #counts the number of 'x' in the queue list
+    global queue
+    tempList=queue
+    count=0
+    for i in range(len(tempList)):
+        if(str(tempList[i].split("$")[0]) == x):
+            count=count+1
+    return count
+
+
+for k in bedList:
+        try:
+                all_users = db.child("main/" + k + "/med").get()
+                for user in all_users.each():
+                        myStr = str(user.val())
+                        myStr = myStr.replace("\'", "\"")
+                        myDict = json.loads(myStr)
+
+                        lengthOfStr = len(k)
+                        tempStrBed = k[11:lengthOfStr]
+                        myDict["bed"] = tempStrBed
+
+                        listOfDict.append(myDict)
+                        myDict={}
+        except:
+                print("EMPTY")
+#above block is used for autonomous medicine deliver
 
 
 while 1:
@@ -63,13 +112,66 @@ while 1:
               path = '/main/' + dataToSend + '/'
               result = db.child("main").child(dataToSend).set(data)
               print(dataToSend)
+      elif(temp.strip() == "DONE"):
+          arduinoBusyFlag=0
+      elif(temp.strip() == "BUSY"):
+          arduinoBusyFlag=1
+        #below block is used for autonomous medicine delivery
+      localtime = time.localtime(time.time())  # this portion calculates the current time
+      minStr = str(localtime[4])
+      hourStr = str(localtime[3])
+      if (localtime[4] < 10):
+          minStr = "0" + str(localtime[4])
+      if (localtime[3] < 10):
+          hourStr = "0" + str(localtime[3])
+      realTimeStr = str(hourStr + ":" + minStr)
+
+      if (localtime[5] == 1 and timeFlag == 0):  # program checks every second if there is any available medicine to give
+          for i in range(len(listOfDict)):  # iterate through the list to find if its time to deliver medicine
+              if (listOfDict[i]["time"] == realTimeStr):
+                  tempList = listOfDict[i]["bed"] + '$' + listOfDict[i]["medicine"] + "/" + listOfDict[i][
+                      "dosage"] + "/" + listOfDict[i]["meal"]
+
+                  queue.append(tempList)
+                  timeFlag = 1  # set flag to 1 to prevent code block from coming here again before 1 second
+
+      # remove multiple medicine for the same bed at the same time
+      # merge those medicine entries into one entry
+      # after polishing, use this code only when a new medicine entry is added
+      # , as we dont need to check duplicates all the time
+      if (localtime[5] == 1):
+          for y in range(len(listOfDict)):
+              varTemp = multiplicacyChecker(str(listOfDict[y]["bed"]))  # call to check the multiplicacy in queue list
+
+              tempQueue = []
+              lis = []
+              for k in range(len(queue)):
+                  lis.append(queue[k].split("$")[0])
+
+              if (varTemp > 1):  # if the number of entries for that bed is greater than one
+                  varIndex = lis.index(str(listOfDict[y]["bed"]))
+                  tempList = ""
+                  for x in range(varTemp):
+                      tempList = tempList + queue.pop(varIndex).split("$")[1] + "-"
+                  queue.append(str(listOfDict[y]["bed"]) + '$' + tempList)
+                  tempList = ""
+
+      if (len(queue) != 0 and arduinoBusyFlag==0):  # check if queue is not empty, if queue has item then send it to arduino if possible
+          varTempStr='med$'+queue.pop(0)
+          print(varTempStr)
+          ser.write(varTempStr.encode('ascii'))
+          time.sleep(1.1);
+
+      if (localtime[5] == 2):  # reset the flag at 2 second mark
+          timeFlag = 0  # reset the flag
+
+        #above block is used for autonomous medicine delivery
    except:
       print("EXCEPTION")
       try:
           ser=serial.Serial('/dev/ttyUSB0',baudrate=9600,timeout=1)
       except:
           print("NOT CONNECTED")
-
 
 
 
