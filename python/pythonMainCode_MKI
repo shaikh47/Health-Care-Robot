@@ -18,7 +18,7 @@ config={"apiKey": "AIzaSyDLEco45i2BszWHJb67eAc7qx8OZ-d9vC8",
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
 
-ser=serial.Serial('/dev/ttyUSB1',baudrate=9600,timeout=1)
+ser=serial.Serial('/dev/ttyUSB0',baudrate=9600,timeout=1)
 time.sleep(1)
 
 arduinoBusyFlag=0
@@ -116,6 +116,29 @@ while 1:
           arduinoBusyFlag=0
       elif(temp.strip() == "BUSY"):
           arduinoBusyFlag=1
+      elif (temp.strip() == "VITAL DATA"):
+          ser.write('SEND DATA$'.encode('ascii'))  # request vital data from arduino
+          temp = ser.readline().decode('ascii')
+          print(temp)
+          strTemp = temp.split('$')  # inserts the splitted words in a list
+
+          tempBed=strTemp[0]
+          tempTemperature=strTemp[1]
+          tempHeartRate=strTemp[2]
+
+          print(tempBed)
+          print(tempTemperature)
+          print(tempHeartRate)
+          
+          dataToSend = 'BED NUMBER_' + tempBed +'/heartRate'
+          path = '/main/' + dataToSend + '/'
+          result = db.child("main").child(dataToSend).push(tempHeartRate)
+          dataToSend = 'BED NUMBER_' + tempBed + '/temperature'
+          path = '/main/' + dataToSend + '/'
+          result = db.child("main").child(dataToSend).push(tempTemperature)
+          print(tempBed)
+          print(tempTemperature)
+          print(tempHeartRate)
         #below block is used for autonomous medicine delivery
       localtime = time.localtime(time.time())  # this portion calculates the current time
       minStr = str(localtime[4])
