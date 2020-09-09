@@ -7,194 +7,234 @@ import pyrebase
 import json
 from datetime import datetime
 
-config={"apiKey": "AIzaSyDLEco45i2BszWHJb67eAc7qx8OZ-d9vC8",
-        "authDomain": "iot-webapplication-47.firebaseapp.com",
-        "databaseURL": "https://iot-webapplication-47.firebaseio.com",
-        "projectId": "iot-webapplication-47",
-        "storageBucket": "iot-webapplication-47.appspot.com",
-        "messagingSenderId": "639567912933",
-        "appId": "1:639567912933:web:e8140919d9641904e2590c"}
+config = {"apiKey": "AIzaSyDLEco45i2BszWHJb67eAc7qx8OZ-d9vC8",
+          "authDomain": "iot-webapplication-47.firebaseapp.com",
+          "databaseURL": "https://iot-webapplication-47.firebaseio.com",
+          "projectId": "iot-webapplication-47",
+          "storageBucket": "iot-webapplication-47.appspot.com",
+          "messagingSenderId": "639567912933",
+          "appId": "1:639567912933:web:e8140919d9641904e2590c"}
 
 firebase = pyrebase.initialize_app(config)
 db = firebase.database()
 
-ser=serial.Serial('/dev/ttyUSB0',baudrate=9600,timeout=1)
+ser = serial.Serial('/dev/ttyUSB0', baudrate=9600, timeout=1)
 time.sleep(1)
 
-arduinoBusyFlag=0
+arduinoBusyFlag = 0
 
-listOfDict=[]
-myDict={}
-timeFlag=0
-countBed=0
-bedList=[]
+listOfDict = []
+myDict = {}
+timeFlag = 0
+countBed = 0
+bedList = []
 
-queue = [] #initialize queue
+queue = []  # initialize queue
 
-firstTimeFlag=0 #variable to avoid data streaming from happening at the first time
+firstTimeFlag = 0  # variable to avoid data streaming from happening at the first time
+firstTimeFlagAnother=0
 
-def stream_handler(message): #this should be put before any code
-    firstTimeFlag=1
-    strEvent=message["event"] # put
-    strPath=message["path"] # /-K7yGTTEp7O549EzTYtI
-    strData=str(message["data"]) # {'title': 'Pyrebase', "body": "etc..."}
+def stream_handler(message):  # this should be put before any code
+    firstTimeFlag = 1
+    strEvent = message["event"]  # put
+    strPath = message["path"]  # /-K7yGTTEp7O549EzTYtI
+    strData = str(message["data"])  # {'title': 'Pyrebase', "body": "etc..."}
 
-    strPath=strPath[1:len(strPath)]#this string holds the path
+    strPath = strPath[1:len(strPath)]  # this string holds the path
 
     strData = strData.replace("\'", "\"")
-    dict=json.loads(strData)
+    dict = json.loads(strData)
     # My dictionary
     for i, j in dict.items():
-        command=i
-        bedNum=j
+        command = i
+        bedNum = j
     print(command)
     print(bedNum)
-    if(bedNum!='-1' and firstTimeFlag!=0):
+    if (bedNum != '-1' and firstTimeFlag != 0):
         strMsgToSend = command + '$' + bedNum + '$'
         ser.write(strMsgToSend.encode('ascii'))
-        #print(strMsgToSend)
-
-my_stream = db.child("botCONTROL").stream(stream_handler)  #enter the path name in the quotes
-
+        # print(strMsgToSend)
+my_stream = db.child("botCONTROL").stream(stream_handler)  # enter the path name in the quotes
 
 
-#below block is used for the autonomous medicine deliver
-all_users = db.child("main").get()  #gets all the available beds
+def stream_handler1(message):  # this should be put before any code
+    global firstTimeFlagAnother
+    global countBed
+    global listOfDict
+    global bedList
+    bedList=[]
+    listOfDict=[]
+    countBed=0
+    if (firstTimeFlagAnother == 1):
+        all_users = db.child("main").get()  # gets all the available beds
+        for user in all_users.each():
+            # print(user.key()) #prints the bed names eg. BED NUMBER_1
+            bedList.append(user.key())
+            countBed = countBed + 1  # counts the number of total beds
+
+        # print(bedList)
+
+        for k in bedList:
+            try:
+                all_users = db.child("main/" + k + "/med").get()
+                for user in all_users.each():
+                    myStr = str(user.val())
+                    myStr = myStr.replace("\'", "\"")
+                    myDict = json.loads(myStr)
+
+                    lengthOfStr = len(k)
+                    tempStrBed = k[11:lengthOfStr]
+                    myDict["bed"] = tempStrBed
+
+                    listOfDict.append(myDict)
+                    myDict = {}
+            except:
+                print("EMPTY")
+    firstTimeFlagAnother = 1
+    print(listOfDict)
+        # print(strMsgToSend)
+my_stream1 = db.child("main").stream(stream_handler1)  # enter the path name in the quotes
+
+
+# below block is used for the autonomous medicine deliver
+all_users = db.child("main").get()  # gets all the available beds
 for user in all_users.each():
-    #print(user.key()) #prints the bed names eg. BED NUMBER_1
+    # print(user.key()) #prints the bed names eg. BED NUMBER_1
     bedList.append(user.key())
-    countBed=countBed+1 #counts the number of total beds
+    countBed = countBed + 1  # counts the number of total beds
 
-#print(bedList)
+# print(bedList)
 
 
-def multiplicacyChecker(x):  #counts the number of 'x' in the queue list
+def multiplicacyChecker(x):  # counts the number of 'x' in the queue list
     global queue
-    tempList=queue
-    count=0
+    tempList = queue
+    count = 0
     for i in range(len(tempList)):
-        if(str(tempList[i].split("$")[0]) == x):
-            count=count+1
+        if (str(tempList[i].split("$")[0]) == x):
+            count = count + 1
     return count
 
 
 for k in bedList:
-        try:
-                all_users = db.child("main/" + k + "/med").get()
-                for user in all_users.each():
-                        myStr = str(user.val())
-                        myStr = myStr.replace("\'", "\"")
-                        myDict = json.loads(myStr)
+    try:
+        all_users = db.child("main/" + k + "/med").get()
+        for user in all_users.each():
+            myStr = str(user.val())
+            myStr = myStr.replace("\'", "\"")
+            myDict = json.loads(myStr)
 
-                        lengthOfStr = len(k)
-                        tempStrBed = k[11:lengthOfStr]
-                        myDict["bed"] = tempStrBed
+            lengthOfStr = len(k)
+            tempStrBed = k[11:lengthOfStr]
+            myDict["bed"] = tempStrBed
 
-                        listOfDict.append(myDict)
-                        myDict={}
-        except:
-                print("EMPTY")
-#above block is used for autonomous medicine deliver
+            listOfDict.append(myDict)
+            myDict = {}
+    except:
+        print("EMPTY")
+# above block is used for autonomous medicine deliver
 
 
 while 1:
-   try:
-      temp = ser.readline().decode('ascii')
-      print(temp.strip())
-      if (temp.strip() == "BED DATA"):
-          ser.write('SEND DATA$'.encode('ascii'))  # request bed data from arduino
-          temp = ser.readline().decode('ascii')
+    try:
+        temp = ser.readline().decode('ascii')
+        print(temp.strip())
+        if (temp.strip() == "BED DATA"):
+            ser.write('SEND DATA$'.encode('ascii'))  # request bed data from arduino
+            temp = ser.readline().decode('ascii')
 
-          strTemp = temp.split('$')  # inserts the splitted words in a list
-          for i in strTemp:
-              data = {'test': 'data'}
-              dataToSend = 'BED NUMBER_' + i
-              path = '/main/' + dataToSend + '/'
-              result = db.child("main").child(dataToSend).set(data)
-              print(dataToSend)
-      elif(temp.strip() == "DONE"):
-          arduinoBusyFlag=0
-      elif(temp.strip() == "BUSY"):
-          arduinoBusyFlag=1
-      elif (temp.strip() == "VITAL DATA"):
-          ser.write('SEND DATA$'.encode('ascii'))  # request vital data from arduino
-          temp = ser.readline().decode('ascii')
-          print(temp)
-          strTemp = temp.split('$')  # inserts the splitted words in a list
+            strTemp = temp.split('$')  # inserts the splitted words in a list
+            for i in strTemp:
+                data = {'test': 'data'}
+                dataToSend = 'BED NUMBER_' + i
+                path = '/main/' + dataToSend + '/'
+                result = db.child("main").child(dataToSend).set(data)
+                print(dataToSend)
+        elif (temp.strip() == "DONE"):
+            arduinoBusyFlag = 0
+        elif (temp.strip() == "BUSY"):
+            arduinoBusyFlag = 1
+        elif (temp.strip() == "VITAL DATA"):
+            ser.write('SEND DATA$'.encode('ascii'))  # request vital data from arduino
+            temp = ser.readline().decode('ascii')
+            print(temp)
+            strTemp = temp.split('$')  # inserts the splitted words in a list
 
-          tempBed=strTemp[0]
-          tempTemperature=strTemp[1]
-          tempHeartRate=strTemp[2]
+            tempBed = strTemp[0]
+            tempTemperature = strTemp[1]
+            tempHeartRate = strTemp[2]
 
-          print(tempBed)
-          print(tempTemperature)
-          print(tempHeartRate)
-          
-          dataToSend = 'BED NUMBER_' + tempBed +'/heartRate'
-          path = '/main/' + dataToSend + '/'
-          result = db.child("main").child(dataToSend).push(tempHeartRate)
-          dataToSend = 'BED NUMBER_' + tempBed + '/temperature'
-          path = '/main/' + dataToSend + '/'
-          result = db.child("main").child(dataToSend).push(tempTemperature)
-          print(tempBed)
-          print(tempTemperature)
-          print(tempHeartRate)
-        #below block is used for autonomous medicine delivery
-      localtime = time.localtime(time.time())  # this portion calculates the current time
-      minStr = str(localtime[4])
-      hourStr = str(localtime[3])
-      if (localtime[4] < 10):
-          minStr = "0" + str(localtime[4])
-      if (localtime[3] < 10):
-          hourStr = "0" + str(localtime[3])
-      realTimeStr = str(hourStr + ":" + minStr)
+            print(tempBed)
+            print(tempTemperature)
+            print(tempHeartRate)
 
-      if (localtime[5] == 1 and timeFlag == 0):  # program checks every second if there is any available medicine to give
-          for i in range(len(listOfDict)):  # iterate through the list to find if its time to deliver medicine
-              if (listOfDict[i]["time"] == realTimeStr):
-                  tempList = listOfDict[i]["bed"] + '$' + listOfDict[i]["medicine"] + "/" + listOfDict[i][
-                      "dosage"] + "/" + listOfDict[i]["meal"]
+            dataToSend = 'BED NUMBER_' + tempBed + '/heartRate'
+            path = '/main/' + dataToSend + '/'
+            result = db.child("main").child(dataToSend).push(tempHeartRate)
+            dataToSend = 'BED NUMBER_' + tempBed + '/temperature'
+            path = '/main/' + dataToSend + '/'
+            result = db.child("main").child(dataToSend).push(tempTemperature)
+            print(tempBed)
+            print(tempTemperature)
+            print(tempHeartRate)
+        # below block is used for autonomous medicine delivery
+        localtime = time.localtime(time.time())  # this portion calculates the current time
+        minStr = str(localtime[4])
+        hourStr = str(localtime[3])
+        if (localtime[4] < 10):
+            minStr = "0" + str(localtime[4])
+        if (localtime[3] < 10):
+            hourStr = "0" + str(localtime[3])
+        realTimeStr = str(hourStr + ":" + minStr)
 
-                  queue.append(tempList)
-                  timeFlag = 1  # set flag to 1 to prevent code block from coming here again before 1 second
+        if (localtime[
+            5] == 1 and timeFlag == 0):  # program checks every second if there is any available medicine to give
+            for i in range(len(listOfDict)):  # iterate through the list to find if its time to deliver medicine
+                if (listOfDict[i]["time"] == realTimeStr):
+                    tempList = listOfDict[i]["bed"] + '$' + listOfDict[i]["medicine"] + "/" + listOfDict[i][
+                        "dosage"] + "/" + listOfDict[i]["meal"]
 
-      # remove multiple medicine for the same bed at the same time
-      # merge those medicine entries into one entry
-      # after polishing, use this code only when a new medicine entry is added
-      # , as we dont need to check duplicates all the time
-      if (localtime[5] == 1):
-          for y in range(len(listOfDict)):
-              varTemp = multiplicacyChecker(str(listOfDict[y]["bed"]))  # call to check the multiplicacy in queue list
+                    queue.append(tempList)
+                    timeFlag = 1  # set flag to 1 to prevent code block from coming here again before 1 second
 
-              tempQueue = []
-              lis = []
-              for k in range(len(queue)):
-                  lis.append(queue[k].split("$")[0])
+        # remove multiple medicine for the same bed at the same time
+        # merge those medicine entries into one entry
+        # after polishing, use this code only when a new medicine entry is added
+        # , as we dont need to check duplicates all the time
+        if (localtime[5] == 1):
+            for y in range(len(listOfDict)):
+                varTemp = multiplicacyChecker(str(listOfDict[y]["bed"]))  # call to check the multiplicacy in queue list
 
-              if (varTemp > 1):  # if the number of entries for that bed is greater than one
-                  varIndex = lis.index(str(listOfDict[y]["bed"]))
-                  tempList = ""
-                  for x in range(varTemp):
-                      tempList = tempList + queue.pop(varIndex).split("$")[1] + "-"
-                  queue.append(str(listOfDict[y]["bed"]) + '$' + tempList+'$')
-                  tempList = ""
+                tempQueue = []
+                lis = []
+                for k in range(len(queue)):
+                    lis.append(queue[k].split("$")[0])
 
-      if (len(queue) != 0 and arduinoBusyFlag==0):  # check if queue is not empty, if queue has item then send it to arduino if possible
-          varTempStr='med$'+queue.pop(0)
-          print(varTempStr)
-          ser.write(varTempStr.encode('ascii'))
-          time.sleep(1.1);
+                if (varTemp > 1):  # if the number of entries for that bed is greater than one
+                    varIndex = lis.index(str(listOfDict[y]["bed"]))
+                    tempList = ""
+                    for x in range(varTemp):
+                        tempList = tempList + queue.pop(varIndex).split("$")[1] + "-"
+                    queue.append(str(listOfDict[y]["bed"]) + '$' + tempList + '$')
+                    tempList = ""
 
-      if (localtime[5] == 2):  # reset the flag at 2 second mark
-          timeFlag = 0  # reset the flag
+        if (len(
+                queue) != 0 and arduinoBusyFlag == 0):  # check if queue is not empty, if queue has item then send it to arduino if possible
+            varTempStr = 'med$' + queue.pop(0) +'$'
+            print(varTempStr)
+            ser.write(varTempStr.encode('ascii'))
+            time.sleep(1.1);
 
-        #above block is used for autonomous medicine delivery
-   except:
-      print("EXCEPTION")
-      try:
-          ser=serial.Serial('/dev/ttyUSB1',baudrate=9600,timeout=1)
-      except:
-          print("NOT CONNECTED")
+        if (localtime[5] == 2):  # reset the flag at 2 second mark
+            timeFlag = 0  # reset the flag
+
+        # above block is used for autonomous medicine delivery
+    except:
+        print("EXCEPTION")
+        try:
+            ser = serial.Serial('/dev/ttyUSB1', baudrate=9600, timeout=1)
+        except:
+            print("NOT CONNECTED")
 
 
 
