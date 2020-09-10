@@ -14,14 +14,14 @@ site=localStorage.getItem('bedNumber');  //get the passed data
 
 function onLoadFirebase() {
     var dtTemp = {
-        deliverGood: "-1"
+        vital: "-1"
     }
     var dtTemp1 = {
         sendBot: "-1"
     }
-    var ref = database.ref("botDELIVER");
+    var ref = database.ref("botCONTROL");
     ref.set(dtTemp);
-    ref = database.ref("botSEND");
+    ref = database.ref("botCONTROL");
     ref.set(dtTemp1);
 }
 
@@ -36,7 +36,7 @@ const btnSend = document.getElementById('send');
 const btnDeliver = document.getElementById('deliver');
 const btnReturn = document.getElementById('return');
 //foreign code
-document.getElementById("deliver").innerHTML = "DELIVER GOODS "+"("+site+")";
+document.getElementById("deliver").innerHTML = "COLLECT VITALS "+"("+site+")";
 document.getElementById("send").innerHTML = "SEND BOT "+"("+site+")";
 //foreign code
 
@@ -171,7 +171,7 @@ btnSend.addEventListener('click', (e) => { //alternate saving
     }
     e.preventDefault();
     console.log("sending");
-    var ref = database.ref("botSEND");
+    var ref = database.ref("botCONTROL");
     ref.set(data);
 });
 
@@ -182,11 +182,11 @@ btnDeliver.addEventListener('click', (e) => { //alternate saving
     var strT=site.slice(11, site.length)
     
     var data = {
-        deliverGood: strT
+        vital: strT
     }
     e.preventDefault();
     console.log("sending");
-    var ref = database.ref("botDELIVER");
+    var ref = database.ref("botCONTROL");
     ref.set(data);
 });
 
@@ -197,7 +197,7 @@ btnReturn.addEventListener('click', (e) => { //alternate saving
     }
     e.preventDefault();
     console.log("return");
-    var ref = database.ref("botSEND");
+    var ref = database.ref("botCONTROL");
     ref.set(data);
 });
 //const some = document.querySelector('#form');

@@ -9,7 +9,18 @@ var firebaseConfig = { //firebase cdn code
 };
 firebase.initializeApp(firebaseConfig);
 
-
+function onLoadFirebase() {
+    var dtTemp = {
+        deliverGood: "-1"
+    }
+    var dtTemp1 = {
+        sendBot: "-1"
+    }
+    var ref = database.ref("botCONTROL");
+    ref.set(dtTemp);
+    ref = database.ref("botCONTROL");
+    ref.set(dtTemp1);
+}
 
 let container = document.querySelector('.container');
 let ul = document.createElement('ul');
@@ -51,7 +62,7 @@ function gotData(data) { //this function retrieves the data from firebase
 
         li.appendChild(str);
 
-        button.innerHTML = 'DELETE';
+        button.innerHTML = 'DASHBOARD';
         //button.setAttribute("id", strID);  //sets an attribute for an elements
         //button.setAttribute("name", strID);
         li.appendChild(button);
@@ -59,7 +70,7 @@ function gotData(data) { //this function retrieves the data from firebase
 
         ul.appendChild(li);
 
-        // deleting data
+        //dashboard visit
         button.addEventListener('click', (e) => {
             e.stopPropagation();
             //so there wont be any duplicate values
