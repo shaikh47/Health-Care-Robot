@@ -145,7 +145,7 @@ while 1:
 
             strTemp = temp.split('$')  # inserts the splitted words in a list
             for i in strTemp:
-                data = {'test': 'data'}
+                data = {'slot': '-1'}
                 dataToSend = 'BED NUMBER_' + i
                 path = '/main/' + dataToSend + '/'
                 result = db.child("main").child(dataToSend).set(data)
@@ -215,15 +215,30 @@ while 1:
                     tempList = ""
                     for x in range(varTemp):
                         tempList = tempList + queue.pop(varIndex).split("$")[1] + "-"
-                    queue.append(str(listOfDict[y]["bed"]) + '$' + tempList + '$')
+                    queue.append(str(listOfDict[y]["bed"]) + '$' + tempList)
                     tempList = ""
-
-        if (len(
-                queue) != 0 and arduinoBusyFlag == 0):  # check if queue is not empty, if queue has item then send it to arduino if possible
+        flagForReturn=0
+        if (len(queue) != 0 and arduinoBusyFlag == 0):  # check if queue is not empty, if queue has item then send it to arduino if possible
             varTempStr = 'med$' + queue.pop(0) +'$'
+            tempVar=varTempStr.split('$');
+            tempPath="BED NUMBER_" + tempVar[1]
+
+            slotNum = db.child("/main/"+tempPath+"/slot").get()
+            varTempStr=varTempStr+slotNum.val()+'$';
+            
             print(varTempStr)
+            if(len(queue) == 0):
+                flagForReturn=1
             ser.write(varTempStr.encode('ascii'))
             time.sleep(1.1);
+            
+            if (len(queue) != 0):
+                flagForReturn = 0
+        
+        if(flagForReturn==1 and arduinoBusyFlag==0):
+            print("return home")
+            ser.write("sendBot$0$".encode('ascii'))
+            
 
         if (localtime[5] == 2):  # reset the flag at 2 second mark
             timeFlag = 0  # reset the flag
