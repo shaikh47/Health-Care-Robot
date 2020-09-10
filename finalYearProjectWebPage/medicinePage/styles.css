@@ -87,3 +87,26 @@ button{
 	margin-top: 10px;
 	margin-bottom: 10px;
 }
+.content{
+    display: table;
+    padding: 10px;
+    width: 100%
+}
+
+
+
+form2 input{
+    text-align: left;
+    margin: auto;
+    display: table;
+    padding: 10px;
+    text-align: center;
+    width: 30%;
+}
+form2 label{
+    text-align: left;
+    margin: auto;
+    display: table;
+    text-align: center;
+    width: 30%;
+}

@@ -23,6 +23,13 @@ function onLoadFirebase() {
     ref.set(dtTemp);
     ref = database.ref("botCONTROL");
     ref.set(dtTemp1);
+    
+    var slotRef = firebase.database().ref('main/'+site+'/');
+    slotRef.on("child_added", function(data, prevChildKey) {
+       var slotNumber = data.val();
+       console.log("slot: " + slotNumber);
+       document.getElementById("slotDiplay").innerHTML = "CURRENT SELECTED SLOT: "+slotNumber;
+    }); 
 }
 
 
@@ -35,6 +42,7 @@ const btn1 = document.getElementById('but1');
 const btnSend = document.getElementById('send');
 const btnDeliver = document.getElementById('deliver');
 const btnReturn = document.getElementById('return');
+const btnSlotSubmit = document.getElementById('slotSubmit');
 //foreign code
 document.getElementById("deliver").innerHTML = "COLLECT VITALS "+"("+site+")";
 document.getElementById("send").innerHTML = "SEND BOT "+"("+site+")";
@@ -56,10 +64,11 @@ var ref = database.ref(pathMain);
 ref.on('value', gotData, errData);
 
 function gotData(data) { //this function retrieves the data from firebase
+    
     var entries = data.val();
     var keys = Object.keys(entries);
     //console.log(keys);
-
+    
     ul = document.createElement('ul'); //reference the dom again
     container.appendChild(ul);
 
@@ -119,6 +128,12 @@ function gotData(data) { //this function retrieves the data from firebase
         });
 
     });
+    var slotRef = firebase.database().ref('main/'+site+'/');
+    slotRef.on("child_added", function(data, prevChildKey) {
+       var slotNumber = data.val();
+       console.log("slot: " + slotNumber);
+       document.getElementById("slotDiplay").innerHTML = "CURRENT SELECTED SLOT: "+slotNumber;
+    });
 
 }
 
@@ -130,7 +145,8 @@ function errData(error) {
 btn1.addEventListener('click', (e) => { //alternate saving
     e.preventDefault();
     console.log("workingg");
-
+    
+    
     if (dummyItems.length != 0)
         container.removeChild(ul); //remove the list before saving a new entry
     //so there wont be any duplicate values
@@ -163,6 +179,7 @@ btn1.addEventListener('click', (e) => { //alternate saving
 
 btnSend.addEventListener('click', (e) => { //alternate saving
     e.preventDefault();
+    
     
     var strT=site.slice(11, site.length)
     
@@ -200,5 +217,24 @@ btnReturn.addEventListener('click', (e) => { //alternate saving
     var ref = database.ref("botCONTROL");
     ref.set(data);
 });
-//const some = document.querySelector('#form');
-//console.log(some.textContent);
+
+
+btnSlotSubmit.addEventListener('click', (e) => { //alternate saving
+    e.preventDefault();
+    console.log("workingg");
+    
+    const slotInput = document.getElementById('slotSelect');
+    var pathToSave='main/'+site+'/slot/';
+    var ref = database.ref('/'+pathToSave);
+
+    console.log(slotInput.value);         
+    ref.set(slotInput.value);
+    form.reset();
+    
+    var slotRef = firebase.database().ref('main/'+site+'/');
+    slotRef.on("child_added", function(data, prevChildKey) {
+       var slotNumber = data.val();
+       console.log("slot: " + slotNumber);
+       document.getElementById("slotDiplay").innerHTML = "CURRENT SELECTED SLOT: "+slotNumber;
+    });
+});
