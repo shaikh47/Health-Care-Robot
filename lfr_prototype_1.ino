@@ -2,6 +2,8 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 #include <EEPROM.h>
+#include <Adafruit_MLX90614.h>
+
 
 //function definition
 void botModeChange(void);//uses an interrupt on pin 3 to sense a button and change the bot mode
@@ -21,6 +23,9 @@ void hardleft(void); // moves the bot left
 void hardright(void);//moves the bot right
 void wait(void);//breaks the bot and stops
 
+void postVitalData(String dataToPost);//posts vital data to the pi
+double bodyTemperature(void);//body temp calculator
+void displayMessageToLCD(String msg);//takes in a string as parameter and displays it to the LCD
 void fromToAssign(void);//assigns all shortest paths from all nodes to all nodes in the c data structure 'struct'
 String pathProvider(byte from, byte to);//provides the shortest path as a string when given 'from' path and 'to' path
 void pathSplitter(String pathToSolve);//splits the main path string by taking into accounts of the 'stop' paths
@@ -32,6 +37,7 @@ String read_String(char add);//used to read string from the EEPROM
 void postBedData(String dataToPost);//takes in a string of bednumbers seperated by '$' and sends it to raspberry pi
 //function definition
 
+String messageForAutoMed=""; //holds the medicine list for autonomous medicine delivery
 int modeChangeVariable=0;
 int deliveryMode=0;//sets the delivery mode of the robot
 
@@ -66,6 +72,11 @@ struct mappedPath{
 
 struct mappedPath pathMap[50];
 
+
+const int irActivisionPin = A1;  
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 /*#define Kp 0.015 //  0.013 works okay(best)   0.01 works good  try D and I gain 0 with p=0.01
 #define Kd 0.012 //  0.012
@@ -96,12 +107,13 @@ void wait(void);
 String str;
 char data = 0;
 const byte interruptPin = 2;  //interrupt pin for encoder
-const byte modeChange=3; //interrupt pin for mode change button
+const byte modeChange=18; //interrupt pin for mode change button
 
 //button variables
 const int okButton = 6;  //okay button
 const int incButton = 5;
 const int decButton = 7;
+int optionVariable=0;
 
 int okButtonState = 0;
 int incButtonState = 0;
@@ -111,6 +123,13 @@ int decButtonState = 0;
 const byte redLight = 52;
 const byte greenLight = 50;
 const byte blueLight = 48;
+
+int slot1=44;//slot light variables ok
+int slot2=40;
+int slot3=46;
+int slot4=38;
+int slot5=42;
+
 
 int y = 255;
 int flag = 0;
@@ -134,12 +153,22 @@ float previous_error, error;
 int period = 50; //Refresh rate period of the loop is 50ms
 unsigned int sensors[10];
 
+int LED13=12;
+
 QTRSensors qtr;
 
 const uint8_t SensorCount = 10;
 uint16_t sensorValues[SensorCount];
 
 void setup() {
+  mlx.begin();  //initiate temp sensor
+
+  pinMode(slot1, OUTPUT);
+  pinMode(slot2, OUTPUT);
+  pinMode(slot3, OUTPUT);
+  pinMode(slot4, OUTPUT);
+  pinMode(slot5, OUTPUT);
+  
   pinMode(motorleft_forward, OUTPUT);
   pinMode(motorleft_backward, OUTPUT);
   pinMode(motorright_forward, OUTPUT);
@@ -154,12 +183,10 @@ void setup() {
   pinMode(okButton, INPUT);
   pinMode(collisionSense, INPUT);
 
-  pinMode(modeChange, INPUT);
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(0, encoder, FALLING);
-  attachInterrupt(1, botModeChange, RISING);
-  //hardleft();
-  lcd.begin(16,2);
+  
+  lcd.begin(20,4);
   lcd.backlight();
 
   // configure the sensors
@@ -241,7 +268,6 @@ void setup() {
   for(int i=0;i<40;i++)
         bedNumber[i]=255;  //by default we are inputing 255 to all array elements to denote that they are empty
 
-    int optionVariable=0;
     //startup option menu
       lcd.clear();
       lcd.setCursor(0,0); 
@@ -257,21 +283,39 @@ void setup() {
         decButtonState = digitalRead(decButton);
 
           if(optionVariable==0){
-            lcd.setCursor(0,1);
+            lcd.setCursor(0,2);
             lcd.print("NEW LOCALIZATION");
+            lcd.setCursor(0,3);
+            lcd.print("                ");       
           }
           else if(optionVariable==1){
-            lcd.setCursor(0,1);
+            lcd.setCursor(0,2);
             lcd.print("LOAD PATH        ");
+            lcd.setCursor(0,3);
+            lcd.print("ON-BOARD CONTROL ");
           }
-  
+          else if(optionVariable==2){
+            lcd.setCursor(0,2);
+            lcd.print("LOAD PATH        ");
+            lcd.setCursor(0,3);
+            lcd.print("IOT CONTROL      ");
+          }
+          else if(optionVariable==3){
+            lcd.setCursor(0,2);
+            lcd.print("MANUAL BLUETOOTH ");
+            lcd.setCursor(0,3);
+            lcd.print("CONTROL          ");
+          }
+          
           if(incButtonState==1){
             optionVariable++;
-            optionVariable = constrain(optionVariable, 0, 1);
+            optionVariable = constrain(optionVariable, 0, 3);
+            delay(200);
           }
           else if(decButtonState==1){
             optionVariable--;
-            optionVariable = constrain(optionVariable, 0, 1);
+            optionVariable = constrain(optionVariable, 0, 3);
+            delay(200);
           }
       }
       lcd.clear();
@@ -280,7 +324,7 @@ void setup() {
     if(optionVariable==0){  //performing task based on the chosen option
       learn=0;              //here if this is selected we will calibrate the path from beginning
     }
-    else if(optionVariable==1){ //here if this is selected we will load previously calibrated path from EEPROM
+    else if(optionVariable==1 || optionVariable==2){ //here if this is selected we will load previously calibrated path from EEPROM
       learn=1;
       path = read_String(0);//load path from EEPROM
       EEPROM.get(500, bedNumber);//load bednumber from EEPROM
@@ -336,7 +380,7 @@ volatile long int counter = 0;
 int lastError = 0;
 
 
-
+int slotLightIndicator=0;
 int flagSolvedRun=0;  //this variable determines if the bot will run in solved mode
 
 void loop() { 
@@ -348,12 +392,17 @@ void loop() {
   }
 
   if(learn){
-    //destinationIndicator=buttonPress();   //call this when using buttons to take inputs
-    destinationIndicator=piCommunicator();  //call this when using pi to take inputs
+    if(optionVariable==0 || optionVariable==1)
+      destinationIndicator=buttonPress();   //call this when using buttons to take inputs 
+    else if(optionVariable==2)
+      destinationIndicator=piCommunicator();  //call this when using pi to take inputs
 
     String opPath=pathProvider(sourceIndicator, destinationIndicator);//load the path to solve  set from and to 0 is home always
     while(opPath=="error"){
-      destinationIndicator=buttonPress();
+      if(optionVariable==0 || optionVariable==1)
+        destinationIndicator=buttonPress();   //call this when using buttons to take inputs 
+      else if(optionVariable==2)
+        destinationIndicator=piCommunicator();  //call this when using pi to take inputs
       opPath=pathProvider(sourceIndicator, destinationIndicator);
     }
 
@@ -378,6 +427,11 @@ void loop() {
 int piCommunicator(){
   int temp;
   String a;
+
+  lcd.clear();
+  lcd.setCursor(0,0); //first is coloumn, second is row
+  lcd.print("READY");
+  
   Serial.print("DONE");
   while(1){    
     if(Serial.available()>0){
@@ -400,11 +454,24 @@ int piCommunicator(){
       }
     }
   
-  if(xs[0]=="deliverGood")
+  if(xs[0]=="med")
     deliveryMode=0;
-  else
+  else if(xs[0]=="sendBot")
     deliveryMode=1;
-    
+  else if(xs[0]=="vital")
+    deliveryMode=2;
+
+
+  if(xs[2].length()>0){  //if there is any message from the raspberry pi
+    messageForAutoMed=xs[2]; //then set the message to a global variable
+  }
+
+  if(deliveryMode==0){
+    slotLightIndicator=xs[3].toInt();
+  }
+  else if(deliveryMode==1){
+  }
+  
   return xs[1].toInt();//the bed number
 }
 
@@ -471,12 +538,13 @@ void leftHand(){
     lcd.clear();
     lcd.setCursor(0,0); 
     lcd.print("ALL BLACK!");  
-    //wait();
-    //delay(200);
+    wait();
+    delay(200);
     steps_forward(22); //after seeing plus intersection go forward for 24 steps
     wait(); //wait a bit
+    delay(200);
     position = qtr.readLineBlack(sensorValues); //read the line again
-    delay(100); //wait for 100 ms
+     //wait for 100 ms
         //below if handles the all black sensor situation which signifies the start position
     //paste
     if((sensorValues[0] > 100 && sensorValues[9] > 100) || (sensorValues[1] > 100 && sensorValues[8] > 100))
@@ -528,8 +596,8 @@ void leftHand(){
       lcd.clear();
       lcd.setCursor(0,0); 
       lcd.print("T INTER");  
-      //wait();
-      //delay(200);
+      wait();
+      delay(200);
     
       position = qtr.readLineBlack(sensorValues);
         while (sensorValues[3] < 150 || sensorValues[4] < 150) {   //move left while the bot finds the line
@@ -1113,13 +1181,75 @@ void whereToGo(char pathWay){
   else if(pathWay == 'E'){
     //here it means that the bot has reached its desired destination
     //for now just keep it empty with an infinte loop
-      steps_hardleft(77);//rotate 180 degrees
+      steps_hardleft(83);//rotate 180 degrees
       wait();
       lcd.clear();
       lcd.setCursor(0,0); 
       lcd.print("END OF THE RUN");
       flagSolvedRun=0;
       delay(1000);
+      //things to be done after bot reaches the destination
+      if(deliveryMode==0){
+        lcd.clear();
+        lcd.setCursor(0,0);      
+        displayMessageToLCD(messageForAutoMed);
+        if(slotLightIndicator==1){
+          digitalWrite(slot1,HIGH);
+          digitalWrite(slot2,LOW);
+          digitalWrite(slot3,LOW);
+          digitalWrite(slot4,LOW);
+          digitalWrite(slot5,LOW);
+        }
+        else if(slotLightIndicator==2){
+          digitalWrite(slot1,LOW);
+          digitalWrite(slot2,HIGH);
+          digitalWrite(slot3,LOW);
+          digitalWrite(slot4,LOW);
+          digitalWrite(slot5,LOW);
+        }
+        else if(slotLightIndicator==3){
+          digitalWrite(slot1,LOW);
+          digitalWrite(slot2,LOW);
+          digitalWrite(slot3,HIGH);
+          digitalWrite(slot4,LOW);
+          digitalWrite(slot5,LOW);
+        }
+        else if(slotLightIndicator==4){
+          digitalWrite(slot1,LOW);
+          digitalWrite(slot2,LOW);
+          digitalWrite(slot3,LOW);
+          digitalWrite(slot4,HIGH);
+          digitalWrite(slot5,LOW);
+        }
+        else if(slotLightIndicator==5){
+          digitalWrite(slot1,LOW);
+          digitalWrite(slot2,LOW);
+          digitalWrite(slot3,LOW);
+          digitalWrite(slot4,LOW);
+          digitalWrite(slot5,HIGH);
+        }
+        //wait for the button to be pressed
+        okButtonState = digitalRead(okButton);
+        while(okButtonState==0){
+          okButtonState = digitalRead(okButton);
+        }
+        digitalWrite(slot1,LOW);
+        digitalWrite(slot2,LOW);
+        digitalWrite(slot3,LOW);
+        digitalWrite(slot4,LOW);
+        digitalWrite(slot5,LOW);
+        messageForAutoMed="";
+      }
+      else if(deliveryMode==2){  //if it is vital sending mode
+        //double bodyTemp=bodyTemperature();
+        //int heartRate=heartRateCalculator();
+        String tempDataToSend= String(destinationIndicator)+'$'+String("23")+'$'+String("80")+'$';
+        postVitalData(tempDataToSend);
+
+        lcd.clear();
+        lcd.setCursor(0,0); //first is coloumn, second is row
+        lcd.print("DONE!");
+      }
       sourceIndicator=destinationIndicator;
   }
 }
@@ -1167,6 +1297,20 @@ void postBedData(String dataToPost){
   }
 }
 
+void postVitalData(String dataToPost){
+  Serial.println("VITAL DATA");
+  while(1){
+    if(Serial.available()>0) {
+      String a = Serial.readStringUntil('$');
+      if(a=="SEND DATA"){
+        delay(100);
+        Serial.println(dataToPost);  //send the bed data
+        break;
+      }
+    }
+  }
+}
+
 
 void botModeChange(){
     static unsigned long last_interrupt_time = 0;
@@ -1195,3 +1339,54 @@ void botModeChange(){
        
     last_interrupt_time = interrupt_time;
 }
+
+
+
+void displayMessageToLCD(String msg){
+  int len=msg.length();
+  String temp[4];
+  int i=0;
+  for(int x=0;x<len;x++){
+      if(msg.charAt(x)=='-'){
+        i++;
+      }
+      else
+        temp[i]=temp[i]+msg.charAt(x);
+  }
+  lcd.clear();
+  lcd.setCursor(0,0); //first is coloumn, second is row
+  lcd.print(temp[0]);
+  lcd.setCursor(0,1);
+  lcd.print(temp[1]);
+  lcd.setCursor(0,2);
+  lcd.print(temp[2]);
+  lcd.setCursor(0,3);
+  lcd.print(temp[3]);
+}
+
+
+
+
+double bodyTemperature(){
+  lcd.clear();
+  lcd.setCursor(0,0); //first is coloumn, second is row
+  lcd.print("PLACE YOUR FORHEAD");
+  lcd.setCursor(0,1);
+  lcd.print("INFRONT OF THE");
+  lcd.setCursor(0,2);
+  lcd.print("THERMOMETER");
+  
+  double thermSum=0;
+  while(analogRead(irActivisionPin)<300){
+    delay(500);
+  }
+  if(analogRead(irActivisionPin)>300){
+    for(int thermI=0;thermI<5;thermI++){
+      thermSum=thermSum+mlx.readObjectTempC();
+      delay(200);
+    }
+  }
+  thermSum=(double)thermSum/5.0;
+  return (thermSum+2.5);  //adjusting value is 2.5
+}
+  
