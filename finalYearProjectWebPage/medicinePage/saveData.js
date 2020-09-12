@@ -9,7 +9,7 @@ var firebaseConfig = { //firebase cdn code
 };
 firebase.initializeApp(firebaseConfig);
 
-
+var slotNumber=0;
 site=localStorage.getItem('bedNumber');  //get the passed data
 
 function onLoadFirebase() {
@@ -24,10 +24,10 @@ function onLoadFirebase() {
     ref = database.ref("botCONTROL");
     ref.set(dtTemp1);
     
-    var slotRef = firebase.database().ref('main/'+site+'/');
-    slotRef.on("child_added", function(data, prevChildKey) {
-       var slotNumber = data.val();
-       console.log("slot: " + slotNumber);
+    var slotRef = firebase.database().ref('main/'+site+'/slot');
+    slotRef.on("value", function(data, prevChildKey) {
+       slotNumber = data.val();
+       console.log("slot is: " + slotNumber);
        document.getElementById("slotDiplay").innerHTML = "CURRENT SELECTED SLOT: "+slotNumber;
     }); 
 }
@@ -128,9 +128,10 @@ function gotData(data) { //this function retrieves the data from firebase
         });
 
     });
-    var slotRef = firebase.database().ref('main/'+site+'/');
-    slotRef.on("child_added", function(data, prevChildKey) {
-       var slotNumber = data.val();
+    
+    var slotRef = firebase.database().ref('main/'+site+'/slot');
+    slotRef.on("value", function(data, prevChildKey) {
+       slotNumber = data.val();
        console.log("slot: " + slotNumber);
        document.getElementById("slotDiplay").innerHTML = "CURRENT SELECTED SLOT: "+slotNumber;
     });
@@ -231,9 +232,9 @@ btnSlotSubmit.addEventListener('click', (e) => { //alternate saving
     ref.set(slotInput.value);
     form.reset();
     
-    var slotRef = firebase.database().ref('main/'+site+'/');
-    slotRef.on("child_added", function(data, prevChildKey) {
-       var slotNumber = data.val();
+    var slotRef = firebase.database().ref('main/'+site+'/slot');
+    slotRef.on("value", function(data, prevChildKey) {
+       slotNumber = data.val();
        console.log("slot: " + slotNumber);
        document.getElementById("slotDiplay").innerHTML = "CURRENT SELECTED SLOT: "+slotNumber;
     });
