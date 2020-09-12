@@ -244,6 +244,7 @@ void setup() {
 
   // print the calibration minimum values measured when emitters were on
   Serial.begin(9600);
+  Serial3.begin(9600);
   for (uint8_t i = 0; i < SensorCount; i++) {
     //Serial.print(qtr.calibrationOn.minimum[i]);
     //Serial.print(' ');
@@ -1241,9 +1242,9 @@ void whereToGo(char pathWay){
         messageForAutoMed="";
       }
       else if(deliveryMode==2){  //if it is vital sending mode
-        //double bodyTemp=bodyTemperature();
-        //int heartRate=heartRateCalculator();
-        String tempDataToSend= String(destinationIndicator)+'$'+String("23")+'$'+String("80")+'$';
+        double bodyTemp=bodyTemperature();
+        int heartRate=heartRateCalculator();
+        String tempDataToSend= String(destinationIndicator)+'$'+String(bodyTemp)+'$'+String(heartRate)+'$';
         postVitalData(tempDataToSend);
 
         lcd.clear();
@@ -1388,5 +1389,22 @@ double bodyTemperature(){
   }
   thermSum=(double)thermSum/5.0;
   return (thermSum+2.5);  //adjusting value is 2.5
+}
+
+
+int heartRateCalculator(){
+  lcd.clear();
+  lcd.setCursor(0,0); //first is coloumn, second is row
+  lcd.print("PLACE YOUR FINGER");
+  lcd.setCursor(0,1);
+  lcd.print("ON THE SENSOR");
+  String tempa="";
+  while(1){
+    if(Serial3.available()>0){
+      tempa=Serial3.readStringUntil('$');
+      return tempa.toInt();
+      break;
+    }
+  }
 }
   
