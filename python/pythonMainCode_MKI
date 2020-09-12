@@ -167,13 +167,29 @@ while 1:
             print(tempBed)
             print(tempTemperature)
             print(tempHeartRate)
+            
+            localtime = time.localtime(time.time())  # this portion calculates the current time
+            minStr = str(localtime[4])
+            hourStr = str(localtime[3])
+            if (localtime[4] < 10):
+                minStr = "0" + str(localtime[4])
+            if (localtime[3] < 10):
+                hourStr = "0" + str(localtime[3])
+            dateToSend = str(hourStr + ":" + minStr+'('+str(localtime[2])+'/'+
+                             str(localtime[1])+'/'+str(localtime[0])+')')
+            print(dateToSend)
 
-            dataToSend = 'BED NUMBER_' + tempBed + '/heartRate'
+            dataToSend = 'BED NUMBER_' + tempBed + '/vitals/heartRate'
             path = '/main/' + dataToSend + '/'
             result = db.child("main").child(dataToSend).push(tempHeartRate)
-            dataToSend = 'BED NUMBER_' + tempBed + '/temperature'
+            
+            dataToSend = 'BED NUMBER_' + tempBed + '/vitals/temperature'
             path = '/main/' + dataToSend + '/'
             result = db.child("main").child(dataToSend).push(tempTemperature)
+            
+            dataToSend = 'BED NUMBER_' + tempBed + '/vitals/dateData'
+            path = '/main/' + dataToSend + '/'
+            result = db.child("main").child(dataToSend).push(dateToSend)
             print(tempBed)
             print(tempTemperature)
             print(tempHeartRate)
