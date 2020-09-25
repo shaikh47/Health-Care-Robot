@@ -160,6 +160,8 @@ QTRSensors qtr;
 const uint8_t SensorCount = 10;
 uint16_t sensorValues[SensorCount];
 
+volatile long int counter = 0;
+
 void setup() {
   mlx.begin();  //initiate temp sensor
 
@@ -234,7 +236,8 @@ void setup() {
   wait();
   delay(500);
   uint16_t position = qtr.readLineBlack(sensorValues);
-  while (sensorValues[4] < 300 || sensorValues[5] < 300) {
+  counter=0;
+  while (sensorValues[4] < 300 || sensorValues[5] < 300 || counter<8) {
     position = qtr.readLineBlack(sensorValues);
     hardright();
   }
@@ -245,6 +248,7 @@ void setup() {
   // print the calibration minimum values measured when emitters were on
   Serial.begin(9600);
   Serial3.begin(9600);
+  Serial2.begin(9600);
   for (uint8_t i = 0; i < SensorCount; i++) {
     //Serial.print(qtr.calibrationOn.minimum[i]);
     //Serial.print(' ');
@@ -377,7 +381,6 @@ void setup() {
     delay(500);
 }
 
-volatile long int counter = 0;
 int lastError = 0;
 
 
@@ -385,6 +388,10 @@ int slotLightIndicator=0;
 int flagSolvedRun=0;  //this variable determines if the bot will run in solved mode
 
 void loop() { 
+  if(optionVariable==3){
+    blControl();
+  }
+  
   uint16_t position;
   if(learn==0){
     position = qtr.readLineBlack(sensorValues); 
@@ -399,6 +406,7 @@ void loop() {
       destinationIndicator=piCommunicator();  //call this when using pi to take inputs
 
     String opPath=pathProvider(sourceIndicator, destinationIndicator);//load the path to solve  set from and to 0 is home always
+    
     while(opPath=="error"){
       if(optionVariable==0 || optionVariable==1)
         destinationIndicator=buttonPress();   //call this when using buttons to take inputs 
@@ -1231,9 +1239,13 @@ void whereToGo(char pathWay){
         }
         //wait for the button to be pressed
         okButtonState = digitalRead(okButton);
+        lcd.clear();
+        lcd.setCursor(0,0); 
+        lcd.print("PRESS OK WHEN DONE");
         while(okButtonState==0){
           okButtonState = digitalRead(okButton);
         }
+        delay(500);
         digitalWrite(slot1,LOW);
         digitalWrite(slot2,LOW);
         digitalWrite(slot3,LOW);
@@ -1407,4 +1419,102 @@ int heartRateCalculator(){
     }
   }
 }
-  
+void do_nothing()
+      {
+    analogWrite(pwmleft,255);
+  analogWrite(pwmright,255);
+  digitalWrite(motorleft_forward,LOW); 
+  digitalWrite(motorleft_backward,LOW);
+  digitalWrite(motorright_forward,LOW);
+  digitalWrite(motorright_backward,LOW);
+    }
+  void left()
+  {
+    analogWrite(pwmleft,x);
+  analogWrite(pwmright,x);
+  digitalWrite(motorleft_forward,LOW); 
+  digitalWrite(motorleft_backward,LOW);
+  digitalWrite(motorright_forward,HIGH);
+  digitalWrite(motorright_backward,LOW);
+    }
+    void right()
+  {
+    analogWrite(pwmleft,x);
+  analogWrite(pwmright,x);
+  digitalWrite(motorleft_forward,HIGH); 
+  digitalWrite(motorleft_backward,LOW);
+  digitalWrite(motorright_forward,LOW);
+  digitalWrite(motorright_backward,LOW);
+    }
+void blControl(){
+  char dataSerial2;
+  while(1){
+    if(Serial2.available()>0)
+{
+    dataSerial2 = Serial2.read();
+    switch(dataSerial2)
+      {
+        case 'F':
+        forward();
+        break;
+        case 'B':
+        backward();
+        break;
+        case 'L':
+        hardleft();
+        break;
+        case 'R':
+        hardright();
+        break;
+        case 'G':
+        left();
+        break;
+        case 'I':
+        right();
+        break;
+        case 'H':
+        //backright();
+        break;
+        case 'J':
+        //backleft();
+        break;
+        case '0':
+        x=40;
+        break;
+        case '1':
+        x=50;
+        break;
+         case '2':
+        x=60;
+        break;
+         case '3':
+        x=70;
+        break;
+         case '4':
+        x=110;
+        break;
+         case '5':
+        x=120;
+        break;
+         case '6':
+        x=130;
+        break;
+         case '7':
+        x=140;
+        break;
+         case '8':
+        x=150;
+        break;
+         case '9':
+        x=160;
+        break;
+         case 'q':
+        x=160;
+        break;
+        case 'S':
+        do_nothing();
+        break;
+      }
+}
+  }
+}
