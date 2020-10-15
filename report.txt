@@ -1,4 +1,5 @@
 Abstract:
+
 Lately there has been a boom in research regarding the usage of robotics in the medical sector, due to the recent growing concern of the pandemic. Usage of robotics in health care ensures safe and sound medical services for both healthcare personnel's and patients. But for developing nations, integrating robots with healthcare has been a great challenge. 
 So, in this work proposed work, our goal is to create an affordable robot, which will be used in the healthcare sector.
 
@@ -9,6 +10,7 @@ This project will be useful in pandemic situation as it bridges health care pers
 
 
 Introduction:
+
 The concept of robot is really old. One of the first instances of building a machine to carry out repetitive tasks happened at around 3000 B.C. Although the definition of Robots has changed quite a bit throughout the years. Any Electro-Mechanical machine which is capable of carrying out some task or series of tasks automatically is called a robot. Also, some manual remotely operated machines can also be classified as a robot. A robot reasons upon its environment based on the implemented on-board logic and programming. Robots have become a part and parcel in our daily industrial works. Robots have been working alongside humans. 
 Combination of people, institutions and resources whose purpose is to provide health care services are collectively knows as Health Care system. Lately there have been a boom in research in the healthcare robots. [1] The main task of a healthcare robot is to provide services to the human users which will improve their health and lifestyle. Health care robot can range from simple cleaning robots or delivery robots to more complex surgery robots. [4] Currently there are several scopes where a health care robot can be deployed. 
 
@@ -43,7 +45,6 @@ Apart from the pandemic situations, uses of Tele-medicine robots and nurse robot
 
 Literature Review:
 
-
 In research conducted by Swati and Pankaj, several maze solving algorithms were discussed and compared for their efficiency. The maze used in their research was a wall based maze which had an opening and an ending. Left hand follower algorithm, Right hand Follower algorithm, Dijkstra's algorithm and flood fill algorithm were used. Among them Flood-fill algorithm was the most efficient in finding the optimal path.
 
 The utilization and necessity of robots in healthcare has been discussed in the research conducted by Zeashan, Afifa and Chang.
@@ -64,6 +65,28 @@ Rationale of Study:
 The hunt for the perfect robot which will revolutionize the health sector for both the health care workers and patients, has been going on for years. And because of that we have seen an exponential growth in research of health care robots. One of the advantages of using line guidance based robots over the camera sensor based robots is that, line guidance based robots are more efficient to be used in the open areas like hospital wards. So, many teams have already worked on Line Guidance based robots in Health Care sector. But, our work fixes previous problems in this sector. Our robot uses efficient PID based algorithm for line tracing. It has a robotic arm which can be used to guide patients during a Tele-medicine session, which a lot of previous work didn't had. We have used a variation of Left Hand Maze solving algorithm which enables the robot to traverse from one hospital bed to another. Our work also consists of a medicine delivery system which delivers correct medicine to the patient at the right time with great accuracy. 
 Also, we have focused on making an efficient machine out of cheap parts, so inherently our robot is cost efficient than other robots of this caliber which makes this project really vital in developing countries. So, work is vital as it solves previous issues among similar works.
 
+
+Expected Output:
+
+Our work is to make a robot which will have both autonomous and manual functionalities, and will be used by health care professionals in order to make the health care sector more efficient and hygienic. We can quantify the outcomes of our project in the following manner:
+	* 
+The robot should have Tele-Medicine capabilities, which will allow a health care personnel to treat patients from a distance in case of contagious disease.
+	* 
+The robot should contain a manual mechanical arm, which will be helpful in assisting patients in Tele-Medicine mode.
+	* 
+The robot should be able to follow a line.
+	* 
+The robot should solve maze patterns in order to get the hospital bed location.
+	* 
+The robot system will contain an IOT website, which will be used for patient data management.
+	* 
+The robot will have obstacle avoidance capabilities.
+	* 
+The robot will be able to keep track of time and deliver medicines to the correct patients.
+	* 
+The robot will be able to obtain patient vitals using on board sensors, and store it in the online database.
+	* 
+The robot will be able to deliver goods to the patients.
 
 
 
