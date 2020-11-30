@@ -17,33 +17,33 @@ void loop () {
     uint16_t value;
     uint16_t range;
 
-    for (pos = 30; pos <= 110; pos += 1) {
+    for (pos = 40; pos <= 100; pos += 1) {
       servo.write(pos); 
       value = analogRead (pin);
       range = get_gp2d12(value)/10.0;
       
-      Serial.print("Actual range: ");
-      Serial.print(range);
-      Serial.print("Predicted range: ");
-      Serial.print(distanceCalc(pos));
-      Serial.println();
+      //Serial.print("Actual range: ");
+      //Serial.print(range);
+      //Serial.print("Predicted range: ");
+      //Serial.print(distanceCalc(pos));
+      //Serial.println();
       checkCollision(range,distanceCalc(pos));
            
-      delay(20);                     
+      delay(10);                     
     }
-  for (pos = 110; pos >= 30; pos -= 1) { 
+  for (pos = 100; pos >= 40; pos -= 1) { 
       servo.write(pos); 
       value = analogRead (pin);
       range = get_gp2d12(value)/10.0;
       
-      Serial.print("Actual range: ");
-      Serial.print(range);
-      Serial.print("Predicted range: ");
-      Serial.print(distanceCalc(pos));
-      Serial.println();
+      //Serial.print("Actual range: ");
+      //Serial.print(range);
+      //Serial.print("Predicted range: ");
+      //Serial.print(distanceCalc(pos));
+      //Serial.println();
       checkCollision(range,distanceCalc(pos));
       
-      delay(20);                       
+      delay(10);                       
     }
 }
 
@@ -74,9 +74,9 @@ void checkCollision(double senseDict,double predictDist){
 
 
 double distanceCalc(double angleServo){
-  int definedDist=15;//defined distance value at 0 degree angle
+  int definedDist=12;//defined distance value at 0 degree angle
   
-  double ang=map(angleServo,30,110,20,155);
+  double ang=map(angleServo,40,100,20,155);
  
   ang=abs(90-ang);
   ang=ang*(PI/180.0);
