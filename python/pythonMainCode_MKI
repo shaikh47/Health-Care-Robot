@@ -97,12 +97,15 @@ my_stream1 = db.child("main").stream(stream_handler1)  # enter the path name in 
 
 
 # below block is used for the autonomous medicine deliver
-all_users = db.child("main").get()  # gets all the available beds
-for user in all_users.each():
-    # print(user.key()) #prints the bed names eg. BED NUMBER_1
-    bedList.append(user.key())
-    countBed = countBed + 1  # counts the number of total beds
-
+try:
+    all_users = db.child("main").get()  # gets all the available beds
+    for user in all_users.each():
+        # print(user.key()) #prints the bed names eg. BED NUMBER_1
+        bedList.append(user.key())
+        countBed = countBed + 1  # counts the number of total beds
+except:
+    print("EMPTY")
+    
 # print(bedList)
 
 
