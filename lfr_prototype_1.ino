@@ -1241,7 +1241,8 @@ void whereToGo(char pathWay){
         okButtonState = digitalRead(okButton);
         lcd.clear();
         lcd.setCursor(0,0); 
-        lcd.print("PRESS OK WHEN DONE");
+        //lcd.print("PRESS OK WHEN DONE");
+        displayMessageToLCD(messageForAutoMed);
         while(okButtonState==0){
           okButtonState = digitalRead(okButton);
         }
