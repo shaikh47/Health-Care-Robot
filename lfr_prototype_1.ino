@@ -5,7 +5,7 @@
 #include <Adafruit_MLX90614.h>
 
 
-//function definition
+//function definition 
 void botModeChange(void);//uses an interrupt on pin 3 to sense a button and change the bot mode
 int buttonPress(void);//returns the bednumber that is pressed
 void leftHand(void);//holds all the logic to follow the line when it's not straight 
