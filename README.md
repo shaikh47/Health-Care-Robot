@@ -5,3 +5,15 @@ The system uses firebase real time database.
 Has advanced features such as delivering medicine to the patients autonomously, sending medical goods, checking patient vitals, upload vital data to the cloud. 
 Has manual control, has a 5-DOF manual robotic arm which can be controlled using hand gestures. 
 Has advanced obstacle avoidance capabilities.
+
+
+
+![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/IMG_20201226_184937.jpg)
+
+![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/login.PNG)
+
+![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/bedlist.PNG)
+
+![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/medEntry.PNG)
+
+![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/graph.PNG)
