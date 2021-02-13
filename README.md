@@ -10,6 +10,8 @@ Has advanced obstacle avoidance capabilities.
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/IMG_20201226_184937.jpg)
 
+![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/IMG_20201226_192208.jpg)
+
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/login.PNG)
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/bedlist.PNG)
