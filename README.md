@@ -32,26 +32,32 @@ Has advanced obstacle avoidance capabilities.
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/robot.jpg)
 
+
 ## Hand Gesture Controller
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/controller.jpg)
 
+
 ## Login Page of the IOT Website
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/login.PNG)
+
 
 ## Bedlist of the available beds
 This list is automatically uploaded from the robot, after the robot computes the arena
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/bedlist.PNG)
 
+
 ## Medicine Entry panel
 Medicine can be assigned for a particular bed with time and other parameters. The robot will automatically deliver those medicines at the correct time, at the correct bed.
 There is also a slot assigning section. A particular slot on the robot can be assigned to a particular bed. For example we can assign slot number 2 to bed number 2. Then upon reaching at bed number 2 in the autonomous delivery mode, slot 2 will light up, signaling that patients medicine is residing in slot number 2.
+
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/medEntry.PNG)
 
 ## Vital Sign Chart of Users
 Users body temperature and Heart Rate readings are displayed as Line chart
+
 
 ![Alt Text](https://github.com/shaikh47/Health-Care-Robot/blob/master/screenshot/graph.PNG)
