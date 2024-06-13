@@ -7,7 +7,7 @@ Has advanced features such as delivering medicine to the patients autonomously, 
 Has manual control, has a 5-DOF manual robotic arm which can be controlled using hand gestures. 
 Has advanced obstacle avoidance capabilities.
 
-## Video Demo: https://drive.google.com/file/d/1mQJPkHuqIsKNERTLCz55I2fx5MTER6VT/view?usp=sharing
+## Video Demo: https://youtu.be/4AxvtFUYg8M?si=R2ETbyTxU-r8ZQP1
 
 # Technology Used
 1. C++/Arduino for microcontroller
